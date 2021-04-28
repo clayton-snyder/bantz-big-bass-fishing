@@ -15,6 +15,8 @@ import (
     "strings"
     "time"
     "sort"
+    "io/ioutil"
+    "encoding/json"
 
     "github.com/bwmarrin/discordgo"
 )
@@ -91,6 +93,7 @@ func main() {
         }
     }
     dg.ChannelMessageSend(fmt.Sprint(ChannelID), "The fishin's good!");
+    load()
     sc := make(chan os.Signal, 1)
     signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
     <-sc
@@ -175,6 +178,20 @@ func usersBassStashString(user string) string {
         stash = append(stash, fmt.Sprint(bass.Size, "cm " + bass.Kind))
     }
     return strings.Join(stash, ", ")
+}
+
+func load() {
+    fmt.Println("loading from file...")
+    file, _ := ioutil.ReadFile("stashes.json")
+
+    json.Unmarshal([]byte(file), &BassMap)
+    fmt.Println("Load successful. Loaded BassMap:")
+    for key, basses := range BassMap {
+        fmt.Println(key)
+        for _, bass := range basses {
+            fmt.Println(fmt.Sprint("\t", bass.Kind, " ", bass.Size, "cm"))
+        }
+    }
 }
 
 
