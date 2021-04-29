@@ -27,7 +27,7 @@ type Bass struct {
 }
 
 const defaultMin = 20
-const defaultRange = 20
+const defaultRange = 30
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
 //const castCooldown = 3600000000
 
