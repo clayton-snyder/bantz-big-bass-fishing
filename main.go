@@ -134,6 +134,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         BassMap[m.Author.Username] = append(BassMap[m.Author.Username], catch)
         UserCooldowns[m.Author.Username] = time.Now().UnixNano()
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(m.Author.Username, " caught a ", catch.Size, "cm ", catch.Kind, " bass!"))
+        save()
     }
 
     if m.Content == "bass stash" {
@@ -192,6 +193,11 @@ func load() {
             fmt.Println(fmt.Sprint("\t", bass.Kind, " ", bass.Size, "cm"))
         }
     }
+}
+
+func save() {
+    file, _ := json.MarshalIndent(BassMap, "", "    ")
+    _ = ioutil.WriteFile("stashes.json", file, 0644)
 }
 
 
