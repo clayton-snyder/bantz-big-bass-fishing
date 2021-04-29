@@ -1,8 +1,3 @@
-// Keep track of user's fish
-// Keep track of user's casts (once per hour)
-// Add some basic types
-// Leaderboard command
-
 package main
 
 import (
