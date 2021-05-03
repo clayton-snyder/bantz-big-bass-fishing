@@ -13,6 +13,7 @@ import (
     "io/ioutil"
     "encoding/json"
     "strconv"
+    "errors"
 
     "github.com/bwmarrin/discordgo"
 )
@@ -218,7 +219,7 @@ func userEatBass(user string, bassIndex1 int, bassIndex2 int) (int, error) {
     BassMap[user][len(BassMap[user]) - 1] = 0;
     BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
     copy(BassMap[user][bassIndex2:], BassMap[user][bassIndex2 + 1:])
-    BassMap[user][len(BassMap[user])] - 1 = 0;
+    BassMap[user][len(BassMap[user]) - 1] = 0;
     BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
 
     newCharges := 1
