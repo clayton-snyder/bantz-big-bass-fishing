@@ -183,7 +183,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         bass2, err2 := strconv.Atoi(tokens[2])
 
         if err1 != nil || err2 != nil {
-            fmt.Println(fmt.Sprint("err1: ", err1, " err2: ", err2)
+            fmt.Println(fmt.Sprint("err1: ", err1, " err2: ", err2))
             return
         }
 
@@ -196,7 +196,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         stash := "**bass stash** - List all of the fine bass you have caught."
         eat := "**eat <x1> <x2>** - Eat the chosen bass to gain energy for an extra cast. Hourly timer is not affected. *Ex.* `eat 7 3` eats bass number 7 and 3 as identified by `bass stash`."
         leaderboard := "**leaderboard** - List the top three bass."
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat "\n", leaderboard))
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", leaderboard))
     }
 
 }
