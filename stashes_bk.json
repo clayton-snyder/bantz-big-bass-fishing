@@ -1,0 +1,66 @@
+{
+    "Clant": [
+        {
+            "Kind": "Redeye",
+            "Size": 24
+        },
+	{
+	    "Kind": "Smallmouth",
+	    "Size": 41
+	},
+	{
+	    "Kind": "Redeye",
+	    "Size": 36
+	},
+	{
+            "Kind": "Smallmouth",
+            "Size": 22
+        }
+    ],
+    "KaiserSose": [
+        {
+            "Kind": "Spotted",
+            "Size": 36 
+        },
+	{
+	    "Kind": "Shoal",
+	    "Size": 38
+	},
+	{
+	    "Kind": "Shoal",
+	    "Size": 36
+	}
+    ],
+    "expnch": [
+    	{
+	    "Kind": "Shoal",
+	    "Size": 33
+	},
+	{
+	    "Kind": "Largemouth",
+	    "Size": 29
+	},
+	{
+	    "Kind": "Spotted",
+	    "Size": 22
+	},
+	{
+	    "Kind": "Largemouth",
+	    "Size": 20
+	},
+	{
+            "Kind": "Redeye",
+            "Size": 33
+        }
+    ],
+    "Forest": [
+        {
+	    "Kind": "Shoal",
+	    "Size": 21
+	},
+	{
+	    "Kind": "Redeye",
+	    "Size": 37
+	}
+    ]
+}
