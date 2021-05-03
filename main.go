@@ -12,6 +12,8 @@ import (
     "sort"
     "io/ioutil"
     "encoding/json"
+    "strings"
+    "strconv"
 
     "github.com/bwmarrin/discordgo"
 )
@@ -35,6 +37,7 @@ var (
     ChannelID string
     BassMap map[string][]Bass
     UserCooldowns map[string]int64
+    UserCharges map[string]int
 )
 
 
@@ -44,6 +47,7 @@ func init() {
     ChannelID = "-1"
     BassMap = make(map[string][]Bass)
     UserCooldowns = make(map[string]int64)
+    UserCharges = make(map[string]int)
 }
 
 func main() {
@@ -119,9 +123,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     if m.Content == "fish" {
         fmt.Println(m.Author.Username + " fish")
         fmt.Println(fmt.Sprintf("now %d, cooldown %d", time.Now().UnixNano(), UserCooldowns[m.Author.Username]))
+
         if time.Now().UnixNano() - UserCooldowns[m.Author.Username] < castCooldown {
-            s.ChannelMessageSend(m.ChannelID, fmt.Sprint("You can fish once per hour."))
-            return
+            if (UserCharges[m.Author.Username] < 1) {
+                s.ChannelMessageSend(m.ChannelID, fmt.Sprint("You can fish once per hour."))
+                return
+            } else {
+                UserCharges[m.Author.Username] = UserCharges[m.Author.Username] - 1
+            }
         }
         s1 := rand.NewSource(time.Now().UnixNano())
         r1 := rand.New(s1)
@@ -160,20 +169,60 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(first, "\n", second, "\n", third))
     }
 
+    if strings.HasPrefix(m.Content, "eat") {
+        tokens = strings.Split(m.Content, " ")
+        if len(tokens) > 3 {
+            s.ChannelMessageSend(m.ChannelID, "Never eat more than two bass at once!")
+            return
+        } else if len(tokens) < 3 {
+            s.ChannelMessageSend(m.ChannelID, "Must specify two bass to eat.")
+            return
+        }
+
+        bass1, err1 := strconv.Atoi(tokens[1])
+        bass2, err2 := strconv.Atoi(tokens[2])
+
+        if err1 != nil || err2 != nil {
+            fmt.Println(fmt.Sprint("err1: ", err1, " err2: ", err2)
+            return
+        }
+
+        newCharges, err := userEatBass(m.Author.Username, bass1, bass2)
+        s.ChannelMessageSend(m.ChannelID, "You ate them down in one.")
+    }
+
     if m.Content == "help" {
         fish := "**fish** - Cast your line."
         stash := "**bass stash** - List all of the fine bass you have caught."
         leaderboard := "**leaderboard** - List the top three bass."
+        eat := "**eat <x1> <x2>** - Eat the chosen bass to gain energy for an extra cast. Hourly timer is not affected. Ex. `eat 7 3` eats bass number 7 and 3 as identified by `bass stash`."
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", leaderboard))
     }
+
 }
 
 func usersBassStashString(user string) string {
     var stash []string
-    for _, bass := range BassMap[user] {
-        stash = append(stash, fmt.Sprint(bass.Size, "cm " + bass.Kind))
+    for i, bass := range BassMap[user] {
+        stash = append(stash, fmt.Sprint("**", i + 1, "** - ", bass.Size, "cm " + bass.Kind))
     }
     return strings.Join(stash, ", ")
+}
+
+// Returns number of charges gained
+func userEatBass(user string, bassIndex int) int {
+    if bassIndex > len(BassMap[user]) - 1 {
+        return 0, errors.New("Invalid bass index")
+    }
+    // Remove bass
+    copy(BassMap[user][bassIndex:], BassMap[user][bassIndex + 1:])
+    BassMap[user][len(BassMap[user])] - 1 = 0;
+    BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
+    
+    newCharges := 1
+    UserCharges[user] = UserCharges[user] + newCharges
+
+    return newCharges, nil
 }
 
 func load() {
