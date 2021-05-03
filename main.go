@@ -187,7 +187,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
             return
         }
 
-        userEatBass(m.Author.Username, bass1, bass2)
+        userEatBass(m.Author.Username, bass1 - 1, bass2 - 2)
         s.ChannelMessageSend(m.ChannelID, "You ate them down in one.")
     }
 
