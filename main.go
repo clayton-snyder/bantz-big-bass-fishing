@@ -34,6 +34,8 @@ func getBassKinds() []string {
 
 var (
     Token string
+    NoGreet bool
+    GuildToBassChannelID map[string]string
     ChannelID string
     BassMap map[string][]Bass
     UserCooldowns map[string]int64
@@ -43,8 +45,11 @@ var (
 
 func init() {
     flag.StringVar(&Token, "t", "", "Bot Token")
+    flag.BoolVar(&NoGreet, "no-greet", false, "Suppress greeting message when bot comes online")
     flag.Parse()
     ChannelID = "-1"
+    fmt.Println("Parsed NoGreet as %v", NoGreet)
+    GuildToBassChannelID = make(map[string]string)
     BassMap = make(map[string][]Bass)
     UserCooldowns = make(map[string]int64)
     UserCharges = make(map[string]int)
@@ -72,12 +77,12 @@ func main() {
     }
 
 
-    /* WHAT IS THIS */
-    /* does `<-sc` make the code wait for the signal.Notify() before it? That would be cool!!!!! */
-    // Wait here until CTRL-C or other term signal is received.
 
     fmt.Println("Bot runnin'. ^C to exit.")
+
+    // For every guild the bot is in, find and map the 'bass-fishing''s channel ID
     for _, guild := range dg.State.Guilds {
+        fmt.Println(fmt.Sprintf("Checking guild %v", guild.ID))
         channels, _ := dg.GuildChannels(guild.ID)
         for _, c := range channels {
             // Check if channel is a guild text channel and not a voice or DM channel
@@ -85,14 +90,26 @@ func main() {
                 continue
             }
             if c.Name == "bass-fishing" {
-                ChannelID = c.ID
+                //ChannelID = c.ID
+                GuildToBassChannelID[guild.ID] = c.ID
+                fmt.Println(fmt.Sprintf("\tMapped guild %v to channel %v (%v)", guild.ID, c.Name, c.ID))
             }
-            fmt.Println("cid %d and name %q", c.ID, c.Name)
-
+            //fmt.Println("cid %d and name %q", c.ID, c.Name)
         }
     }
-    dg.ChannelMessageSend(fmt.Sprint(ChannelID), "The fishin's good!");
+
+    if !NoGreet {
+        for guildID := range GuildToBassChannelID {
+            dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("The fishin's good!"));
+        }
+    }
+
     load()
+
+    /* WHAT IS THIS */
+    /* does `<-sc` make the code wait for the signal.Notify() before it? That would be cool!!!!! */
+    // Wait here until CTRL-C or other term signal is received.
+
     sc := make(chan os.Signal, 1)
     signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
     <-sc
@@ -106,7 +123,7 @@ func main() {
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     // Ignore all messages created by the bot itself
     // This isn't required in this specific example but it's a good practice.
-    if m.Author.ID == s.State.User.ID || m.ChannelID != ChannelID {
+    if m.Author.ID == s.State.User.ID {
         return
     }
 
