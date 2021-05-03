@@ -12,7 +12,6 @@ import (
     "sort"
     "io/ioutil"
     "encoding/json"
-    "strings"
     "strconv"
 
     "github.com/bwmarrin/discordgo"
@@ -210,15 +209,18 @@ func usersBassStashString(user string) string {
 }
 
 // Returns number of charges gained
-func userEatBass(user string, bassIndex int) int {
-    if bassIndex > len(BassMap[user]) - 1 {
+func userEatBass(user string, bassIndex1 int, bassIndex2 int) (int, error) {
+    if bassIndex1 > len(BassMap[user]) - 1 || bassIndex2 > len(BassMap[user]) - 1 {
         return 0, errors.New("Invalid bass index")
     }
     // Remove bass
-    copy(BassMap[user][bassIndex:], BassMap[user][bassIndex + 1:])
+    copy(BassMap[user][bassIndex1:], BassMap[user][bassIndex1 + 1:])
+    BassMap[user][len(BassMap[user]) - 1] = 0;
+    BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
+    copy(BassMap[user][bassIndex2:], BassMap[user][bassIndex2 + 1:])
     BassMap[user][len(BassMap[user])] - 1 = 0;
     BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
-    
+
     newCharges := 1
     UserCharges[user] = UserCharges[user] + newCharges
 
