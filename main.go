@@ -170,7 +170,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     }
 
     if strings.HasPrefix(m.Content, "eat") {
-        tokens = strings.Split(m.Content, " ")
+        tokens := strings.Split(m.Content, " ")
         if len(tokens) > 3 {
             s.ChannelMessageSend(m.ChannelID, "Never eat more than two bass at once!")
             return
