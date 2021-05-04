@@ -24,7 +24,7 @@ type Bass struct {
 }
 
 const defaultMin = 20
-const defaultRange = 30
+const defaultRange = 31
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
 //const castCooldown = 3600000000
 
@@ -34,20 +34,25 @@ func getBassKinds() []string {
 
 var (
     Token string
+    NoGreet bool
+    GuildToBassChannelID map[string]string
     ChannelID string
     BassMap map[string][]Bass
     UserCooldowns map[string]int64
-    UserCharges map[string]int
+    UserCharges map[string]float32
 )
 
 
 func init() {
     flag.StringVar(&Token, "t", "", "Bot Token")
+    flag.BoolVar(&NoGreet, "no-greet", false, "Suppress greeting message when bot comes online")
     flag.Parse()
     ChannelID = "-1"
+    fmt.Println("Parsed NoGreet as %v", NoGreet)
+    GuildToBassChannelID = make(map[string]string)
     BassMap = make(map[string][]Bass)
     UserCooldowns = make(map[string]int64)
-    UserCharges = make(map[string]int)
+    UserCharges = make(map[string]float32)
 }
 
 func main() {
@@ -72,12 +77,12 @@ func main() {
     }
 
 
-    /* WHAT IS THIS */
-    /* does `<-sc` make the code wait for the signal.Notify() before it? That would be cool!!!!! */
-    // Wait here until CTRL-C or other term signal is received.
 
     fmt.Println("Bot runnin'. ^C to exit.")
+
+    // For every guild the bot is in, find and map the 'bass-fishing''s channel ID
     for _, guild := range dg.State.Guilds {
+        fmt.Println(fmt.Sprintf("Checking guild %v", guild.ID))
         channels, _ := dg.GuildChannels(guild.ID)
         for _, c := range channels {
             // Check if channel is a guild text channel and not a voice or DM channel
@@ -85,14 +90,30 @@ func main() {
                 continue
             }
             if c.Name == "bass-fishing" {
-                ChannelID = c.ID
+                //ChannelID = c.ID
+                GuildToBassChannelID[guild.ID] = c.ID
+                fmt.Println(fmt.Sprintf("\tMapped guild %v to channel %v (%v)", guild.ID, c.Name, c.ID))
             }
-            fmt.Println("cid %d and name %q", c.ID, c.Name)
-
+            //fmt.Println("cid %d and name %q", c.ID, c.Name)
         }
     }
-    dg.ChannelMessageSend(fmt.Sprint(ChannelID), "The fishin's good!");
+
+    if !NoGreet {
+        for guildID := range GuildToBassChannelID {
+            //dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("The fishin's good!"));
+            dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("**Updates**\n" +
+            "* You can now eat any number of bass at once. Each bass eaten grants half a charge.\n" +
+            "* Added `casts` command to view the amount of extra casts stored up.\n" +
+            "* Commands are now case-insensitive."))
+        }
+    }
+
     load()
+
+    /* WHAT IS THIS */
+    /* does `<-sc` make the code wait for the signal.Notify() before it? That would be cool!!!!! */
+    // Wait here until CTRL-C or other term signal is received.
+
     sc := make(chan os.Signal, 1)
     signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
     <-sc
@@ -106,7 +127,7 @@ func main() {
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     // Ignore all messages created by the bot itself
     // This isn't required in this specific example but it's a good practice.
-    if m.Author.ID == s.State.User.ID || m.ChannelID != ChannelID {
+    if m.Author.ID == s.State.User.ID {
         return
     }
 
@@ -114,22 +135,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     fmt.Println(m.Author.Email);
     fmt.Println(m.Author.Username);
 
+    messageLowerCase := strings.ToLower(m.Content)
 
-    if m.Content == "hey" {
+    if messageLowerCase == "hey" {
         fmt.Println(m.Author.Username + "hey")
         s.ChannelMessageSend(m.ChannelID, "sup")
     }
 
-    if m.Content == "fish" {
+    if messageLowerCase == "fish" {
         fmt.Println(m.Author.Username + " fish")
         fmt.Println(fmt.Sprintf("now %d, cooldown %d", time.Now().UnixNano(), UserCooldowns[m.Author.Username]))
 
         if time.Now().UnixNano() - UserCooldowns[m.Author.Username] < castCooldown {
-            if (UserCharges[m.Author.Username] < 1) {
+            if (UserCharges[m.Author.Username] < 1.0) {
                 s.ChannelMessageSend(m.ChannelID, fmt.Sprint("You can fish once per hour."))
                 return
             } else {
-                UserCharges[m.Author.Username] = UserCharges[m.Author.Username] - 1
+                UserCharges[m.Author.Username] = UserCharges[m.Author.Username] - 1.0
             }
         }
         s1 := rand.NewSource(time.Now().UnixNano())
@@ -141,19 +163,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         save()
     }
 
-    if m.Content == "bass stash" {
+    if messageLowerCase == "bass stash" {
         fmt.Println(m.Author.Username + " bass stash")
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(m.Author.Username + "'s Bass Stash: " + usersBassStashString(m.Author.Username)))
     }
 
-    if m.Content == "leaderboard" {
+    if messageLowerCase == "casts" {
+        fmt.Println(m.Author.Username + " casts")
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You have %v extra casts.", UserCharges[m.Author.Username]))
+    }
+
+    if messageLowerCase == "leaderboard" {
         fmt.Println(m.Author.Username + " leaderboard")
         type LeaderboardBass struct {
             Name string
             Size int
             Kind string
         }
-        //var allBass [3]LeaderboardBass
         allBass := make([]LeaderboardBass, 3)
         for key, basses := range BassMap {
             for _, bass := range basses {
@@ -169,32 +195,43 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(first, "\n", second, "\n", third))
     }
 
-    if strings.HasPrefix(m.Content, "eat") {
-        tokens := strings.Split(m.Content, " ")
-        if len(tokens) > 3 {
-            s.ChannelMessageSend(m.ChannelID, "Never eat more than two bass at once!")
-            return
-        } else if len(tokens) < 3 {
-            s.ChannelMessageSend(m.ChannelID, "Must specify two bass to eat.")
-            return
+    if strings.HasPrefix(messageLowerCase, "eat") {
+        tokens := strings.Split(messageLowerCase, " ")
+        bassIds := []int{}
+
+        // Start at index 1 to skip 'eat'
+        for i := 1; i < len(tokens); i++ {
+            bassId, err := strconv.Atoi(tokens[i])
+            if err != nil {
+                fmt.Println("error parsing bassId in eat: ", err)
+                s.ChannelMessageSend(m.ChannelID, fmt.Sprint("Wrong."))
+                return
+            }
+            if bassId > len(BassMap[m.Author.Username]) || bassId == 0 {
+                fmt.Println(m.Author.Username, " tried to eat a bass they don't have: ", bassId)
+                s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You do not have a bass number %v.", bassId))
+                return
+            }
+            if bassId < 0 {
+                s.ChannelMessageSend(m.ChannelID, fmt.Sprint("You threw up some bass."))
+                return
+            }
+            bassIds = append(bassIds, bassId)
         }
 
-        bass1, err1 := strconv.Atoi(tokens[1])
-        bass2, err2 := strconv.Atoi(tokens[2])
-
-        if err1 != nil || err2 != nil {
-            fmt.Println(fmt.Sprint("err1: ", err1, " err2: ", err2))
+        gainedCharges, err := userEatBass(m.Author.Username, bassIds)
+        if err != nil {
+            fmt.Println(fmt.Sprintf("Error from userEatBass(): %v", err))
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("There was an error: %v", err))
             return
         }
-
-        userEatBass(m.Author.Username, bass1 - 1, bass2 - 2)
-        s.ChannelMessageSend(m.ChannelID, "You ate them down in one.")
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You ate them down in one. Gained %v casts.", gainedCharges))
     }
 
-    if m.Content == "help" {
+    if messageLowerCase == "help" {
         fish := "**fish** - Cast your line."
         stash := "**bass stash** - List all of the fine bass you have caught."
-        eat := "**eat <x1> <x2>** - Eat the chosen bass to gain energy for an extra cast. Hourly timer is not affected. *Ex.* `eat 7 3` eats bass number 7 and 3 as identified by `bass stash`."
+        eat := "**eat <x1> <x2> ...** - Eat the chosen bass to gain energy for an extra cast. Gain 0.5 casts for every bass. Hourly timer is not affected. *Ex.* `eat 7 3 4` eats bass numbers 7, 3, and 4 as identified by `bass stash` and grants 1.5 extra casts."
         leaderboard := "**leaderboard** - List the top three bass."
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", leaderboard))
     }
@@ -210,22 +247,38 @@ func usersBassStashString(user string) string {
 }
 
 // Returns number of charges gained
-func userEatBass(user string, bassIndex1 int, bassIndex2 int) (int, error) {
-    if bassIndex1 > len(BassMap[user]) - 1 || bassIndex2 > len(BassMap[user]) - 1 {
-        return 0, errors.New("Invalid bass index")
+func userEatBass(user string, bassIds []int) (float32, error) {
+    for _, id := range bassIds {
+        if id < -1 || id > len(BassMap[user]) {
+            return -1, errors.New(fmt.Sprint("Invalid bass index: ", id))
+        }
     }
-    // Remove bass
-    copy(BassMap[user][bassIndex1:], BassMap[user][bassIndex1 + 1:])
-    BassMap[user][len(BassMap[user]) - 1] = Bass{Kind: "", Size: -1}
-    BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
-    copy(BassMap[user][bassIndex2:], BassMap[user][bassIndex2 + 1:])
-    BassMap[user][len(BassMap[user]) - 1] = Bass{Kind: "", Size: -1}
-    BassMap[user] = BassMap[user][:len(BassMap[user]) - 1]
 
-    newCharges := 1
+    // Mark specified Bass for deletion, incrementing charge for each
+    var newCharges float32
+    for _, id := range bassIds {
+        index := id - 1 // Adjust for 0 indexing
+        BassMap[user][index].Kind = "DELETE"
+        newCharges += 0.5
+    }
+
+    BassMap[user] = collapseStash(user)
     UserCharges[user] = UserCharges[user] + newCharges
 
     return newCharges, nil
+}
+
+// Removes all Bass marked for deletion
+func collapseStash(user string) []Bass {
+    var collapsed = []Bass{}
+
+    for _, bass := range BassMap[user] {
+        if bass.Kind != "DELETE" {
+            collapsed = append(collapsed, bass)
+        }
+    }
+
+    return collapsed
 }
 
 func load() {
