@@ -228,6 +228,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         if parseErr != nil {
             fmt.Println(fmt.Sprintf("%v got error: %v", m.Author.Username, parseErr))
             s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", parseErr))
+            return
         }
 
         gainedCharges, makeBaitErr := userMakeBait(m.Author.Username, bassIds)
