@@ -232,8 +232,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         fish := "**fish** - Cast your line."
         stash := "**bass stash** - List all of the fine bass you have caught."
         eat := "**eat <x1> <x2> ...** - Eat the chosen bass to gain energy for an extra cast. Gain 0.5 casts for every bass. Hourly timer is not affected. *Ex.* `eat 7 3 4` eats bass numbers 7, 3, and 4 as identified by `bass stash` and grants 1.5 extra casts."
+        casts := "**casts** - Display how many extra casts you have."
         leaderboard := "**leaderboard** - List the top three bass."
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", leaderboard))
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", casts, "\n", leaderboard))
     }
 
 }
