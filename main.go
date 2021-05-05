@@ -104,9 +104,9 @@ func main() {
         for guildID := range GuildToBassChannelID {
             //dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("The fishin's good!"));
             dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("**Updates**\n" +
-            "* You can now eat any number of bass at once. Each bass eaten grants half a charge.\n" +
-            "* Added `casts` command to view the amount of extra casts stored up.\n" +
-            "* Commands are now case-insensitive."))
+            "* Added **make-bait** to make bait charges, 3 charges per bass. Usage is same as **eat**.\n" +
+            "* \n" +
+            "* "))
         }
     }
 
@@ -172,9 +172,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         return
     }
 
-    if messageLowerCase == "casts" {
-        fmt.Println(m.Author.Username + " casts")
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You have %v extra casts.", UserCharges[m.Author.Username]))
+    if messageLowerCase == "casts" || messageLowerCase == "bait" {
+        fmt.Println(m.Author.Username + " " + messageLowerCase)
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You have %v extra casts and %v bait charges.", UserCharges[m.Author.Username], UserBait[m.Author.Username]))
         return
     }
 
@@ -246,8 +246,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         fish := "**fish** - Cast your line."
         stash := "**bass stash** - List all of the fine bass you have caught."
         eat := "**eat <x1> <x2> ...** - Eat the chosen bass to gain energy for an extra cast. Gain 0.5 casts for every bass. Hourly timer is not affected. *Ex.* `eat 7 3 4` eats bass numbers 7, 3, and 4 as identified by `bass stash` and grants 1.5 extra casts."
-        makeBait := "**make-bait <x1> <x2> ...** - Turn the chosen bass into bait charges to power up your casts. Each bass grants 3 bait charges."
-        casts := "**casts** - Display how many extra casts you have."
+        makeBait := "**make-bait <x1> <x2> ...** - Turn the chosen bass into bait charges to make your casts more powerful. Each bass grants 3 bait charges."
+        casts := "**casts** - Display how many cast and bait charges you have."
         leaderboard := "**leaderboard** - List the top three bass."
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", casts, "\n", leaderboard))
         return
@@ -324,7 +324,7 @@ func userMakeBait(user string, bassIds []int) (int, error) {
 func validateBassIdList(user string, bassIds []int) (bool, error) {
     for _, id := range bassIds {
         if id < 1 || id > len(BassMap[user]) {
-            return false, errors.New(fmt.Sprintf("Bass ID too low (minimum is 1): %v", id))
+            return false, errors.New(fmt.Sprintf("You do not have a Bass number %v.", id))
         }
     }
 
