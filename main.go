@@ -128,7 +128,6 @@ func main() {
 // message is created on any channel that the authenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     // Ignore all messages created by the bot itself
-    // This isn't required in this specific example but it's a good practice.
     if m.Author.ID == s.State.User.ID {
         return
     }
@@ -142,6 +141,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     if messageLowerCase == "hey" {
         fmt.Println(m.Author.Username + "hey")
         s.ChannelMessageSend(m.ChannelID, "sup")
+        return
     }
 
     if messageLowerCase == "fish" {
@@ -163,16 +163,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         UserCooldowns[m.Author.Username] = time.Now().UnixNano()
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(m.Author.Username, " caught a ", catch.Size, "cm ", catch.Kind, " bass!"))
         save()
+        return
     }
 
     if messageLowerCase == "bass stash" {
         fmt.Println(m.Author.Username + " bass stash")
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(m.Author.Username + "'s Bass Stash: " + usersBassStashString(m.Author.Username)))
+        return
     }
 
     if messageLowerCase == "casts" {
         fmt.Println(m.Author.Username + " casts")
         s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You have %v extra casts.", UserCharges[m.Author.Username]))
+        return
     }
 
     if messageLowerCase == "leaderboard" {
@@ -195,46 +198,51 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         second := fmt.Sprint(":second_place: " + allBass[1].Name + "'s ", allBass[1].Size, "cm " + allBass[1].Kind + " bass.") 
         third := fmt.Sprint(":third_place: " + allBass[2].Name + "'s ", allBass[2].Size, "cm " + allBass[2].Kind + " bass.") 
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(first, "\n", second, "\n", third))
+        return
     }
 
     if strings.HasPrefix(messageLowerCase, "eat") {
+        fmt.Println(m.Author.Username + " eat")
         tokens := strings.Split(messageLowerCase, " ")
-        bassIds := []int{}
+        bassIds, strParseErr := stringSliceToInt(tokens[1:]) // Ignore first element (the command string)
 
-        // Start at index 1 to skip 'eat'
-        for i := 1; i < len(tokens); i++ {
-            bassId, err := strconv.Atoi(tokens[i])
-            if err != nil {
-                fmt.Println("error parsing bassId in eat: ", err)
-                s.ChannelMessageSend(m.ChannelID, fmt.Sprint("Wrong."))
-                return
-            }
-            if bassId > len(BassMap[m.Author.Username]) || bassId == 0 {
-                fmt.Println(m.Author.Username, " tried to eat a bass they don't have: ", bassId)
-                s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You do not have a bass number %v.", bassId))
-                return
-            }
-            if bassId < 0 {
-                s.ChannelMessageSend(m.ChannelID, fmt.Sprint("You threw up some bass."))
-                return
-            }
-            bassIds = append(bassIds, bassId)
+        if strParseErr != nil {
+            fmt.Println(fmt.Sprintf("%v", strParseErr))
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprint("Wrong."))
+            return
         }
 
         gainedCharges, err := userEatBass(m.Author.Username, bassIds)
         if err != nil {
-            fmt.Println(fmt.Sprintf("Error from userEatBass(): %v", err))
-            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("There was an error: %v", err))
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", err))
             return
         }
+
         s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You ate them down in one. Gained %v casts.", gainedCharges))
+        return
     }
 
     if strings.HasPrefix(messageLowerCase, "make-bait") {
-   // TODO 
+        fmt.Println(m.Author.Username + " make-bait")
+        bassIds, parseErr := stringSliceToInt(strings.Split(messageLowerCase, " ")[1:]) // Ignore first element (the command string)
+        if parseErr != nil {
+            fmt.Println(fmt.Sprintf("%v got error: %v", m.Author.Username, parseErr))
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", parseErr))
+        }
+
+        gainedCharges, makeBaitErr := userMakeBait(m.Author.Username, bassIds)
+        if makeBaitErr != nil {
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", makeBaitErr))
+            return
+        }
+
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Gained %v bait charges.", gainedCharges))
+        save()
+        return
     }
 
     if messageLowerCase == "help" {
+        fmt.Println(m.Author.Username + " help")
         fish := "**fish** - Cast your line."
         stash := "**bass stash** - List all of the fine bass you have caught."
         eat := "**eat <x1> <x2> ...** - Eat the chosen bass to gain energy for an extra cast. Gain 0.5 casts for every bass. Hourly timer is not affected. *Ex.* `eat 7 3 4` eats bass numbers 7, 3, and 4 as identified by `bass stash` and grants 1.5 extra casts."
@@ -242,8 +250,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         casts := "**casts** - Display how many extra casts you have."
         leaderboard := "**leaderboard** - List the top three bass."
         s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", casts, "\n", leaderboard))
+        return
     }
 
+}
+
+func stringSliceToInt(stringSlice []string) ([]int, error) {
+    var intSlice []int
+
+    for _, str := range stringSlice {
+        intVal, err := strconv.Atoi(str)
+        if err != nil {
+            return nil, err
+        }
+        intSlice = append(intSlice, intVal)
+    }
+
+    return intSlice, nil
 }
 
 func usersBassStashString(user string) string {
@@ -258,8 +281,8 @@ func usersBassStashString(user string) string {
 func userEatBass(user string, bassIds []int) (float32, error) {
     _, bassIdErr := validateBassIdList(user, bassIds)
     if bassIdErr != nil {
-        fmt.Println(bassIdErr)
-        return 0.0, errors.New(fmt.Sprintf("%v", bassIdErr))
+        fmt.Println(fmt.Sprintf("%v got error eating bass: %v", user, bassIdErr))
+        return 0.0, bassIdErr
     }
 
     // Mark specified Bass for deletion, incrementing charge for each
@@ -277,7 +300,7 @@ func userEatBass(user string, bassIds []int) (float32, error) {
 }
 
 // Returns bait charges gained
-func makeBait(user string, bassIds []int) (int, error) {
+func userMakeBait(user string, bassIds []int) (int, error) {
     _, bassIdErr := validateBassIdList(user, bassIds)
     if bassIdErr != nil {
         fmt.Println(bassIdErr)
@@ -300,10 +323,8 @@ func makeBait(user string, bassIds []int) (int, error) {
 // Validates that a given list of bassIds are all clean and match a bass the user has.
 func validateBassIdList(user string, bassIds []int) (bool, error) {
     for _, id := range bassIds {
-        if id < 1 {
+        if id < 1 || id > len(BassMap[user]) {
             return false, errors.New(fmt.Sprintf("Bass ID too low (minimum is 1): %v", id))
-        } else if id > len(BassMap[user]) {
-            return false, errors.New(fmt.Sprintf("Bass ID (%v) exceeds user's (%v) stash size (%v).", id, user, len(BassMap[user])))
         }
     }
 
@@ -324,22 +345,33 @@ func collapseStash(user string) []Bass {
 }
 
 func load() {
-    fmt.Println("loading from file...")
-    file, _ := ioutil.ReadFile("stashes.json")
+    fmt.Println("loading stashes from file...")
+    stashesFile, _ := ioutil.ReadFile("stashes.json")
 
-    json.Unmarshal([]byte(file), &BassMap)
-    fmt.Println("Load successful. Loaded BassMap:")
+    json.Unmarshal([]byte(stashesFile), &BassMap)
+    fmt.Println("Stashes load successful. Loaded BassMap:")
     for key, basses := range BassMap {
         fmt.Println(key)
         for _, bass := range basses {
             fmt.Println(fmt.Sprint("\t", bass.Kind, " ", bass.Size, "cm"))
         }
     }
+
+    fmt.Println("loading bait charges from file...")
+    baitFile, _ := ioutil.ReadFile("bait_charges.json")
+
+    json.Unmarshal([]byte(baitFile), &UserBait)
+    fmt.Println("Bait charges load successful. Loaded charges:")
+    for key, charges := range UserBait {
+        fmt.Println(fmt.Sprintf("%v: %v", key, charges))
+    }
 }
 
 func save() {
-    file, _ := json.MarshalIndent(BassMap, "", "    ")
-    _ = ioutil.WriteFile("stashes.json", file, 0644)
+    stashFile, _ := json.MarshalIndent(BassMap, "", "    ")
+    _ = ioutil.WriteFile("stashes.json", stashFile, 0644)
+    baitFile, _ := json.MarshalIndent(UserBait, "", "    ")
+    _ = ioutil.WriteFile("bait_charges.json", baitFile, 0644)
 }
 
 
