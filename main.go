@@ -40,6 +40,7 @@ var (
     BassMap map[string][]Bass
     UserCooldowns map[string]int64
     UserCharges map[string]float32
+    UserBait map[string]int
 )
 
 
@@ -53,6 +54,7 @@ func init() {
     BassMap = make(map[string][]Bass)
     UserCooldowns = make(map[string]int64)
     UserCharges = make(map[string]float32)
+    UserBait = make(map[string]int)
 }
 
 func main() {
@@ -228,13 +230,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You ate them down in one. Gained %v casts.", gainedCharges))
     }
 
+    if strings.HasPrefix(messageLowerCase, "make-bait") {
+   // TODO 
+    }
+
     if messageLowerCase == "help" {
         fish := "**fish** - Cast your line."
         stash := "**bass stash** - List all of the fine bass you have caught."
         eat := "**eat <x1> <x2> ...** - Eat the chosen bass to gain energy for an extra cast. Gain 0.5 casts for every bass. Hourly timer is not affected. *Ex.* `eat 7 3 4` eats bass numbers 7, 3, and 4 as identified by `bass stash` and grants 1.5 extra casts."
+        makeBait := "**make-bait <x1> <x2> ...** - Turn the chosen bass into bait charges to power up your casts. Each bass grants 3 bait charges."
         casts := "**casts** - Display how many extra casts you have."
         leaderboard := "**leaderboard** - List the top three bass."
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", casts, "\n", leaderboard))
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", casts, "\n", leaderboard))
     }
 
 }
@@ -247,12 +254,12 @@ func usersBassStashString(user string) string {
     return strings.Join(stash, ", ")
 }
 
-// Returns number of charges gained
+// Returns cast charges gained
 func userEatBass(user string, bassIds []int) (float32, error) {
-    for _, id := range bassIds {
-        if id < -1 || id > len(BassMap[user]) {
-            return -1, errors.New(fmt.Sprint("Invalid bass index: ", id))
-        }
+    _, bassIdErr := validateBassIdList(user, bassIds)
+    if bassIdErr != nil {
+        fmt.Println(bassIdErr)
+        return 0.0, errors.New(fmt.Sprintf("%v", bassIdErr))
     }
 
     // Mark specified Bass for deletion, incrementing charge for each
@@ -267,6 +274,40 @@ func userEatBass(user string, bassIds []int) (float32, error) {
     UserCharges[user] = UserCharges[user] + newCharges
 
     return newCharges, nil
+}
+
+// Returns bait charges gained
+func makeBait(user string, bassIds []int) (int, error) {
+    _, bassIdErr := validateBassIdList(user, bassIds)
+    if bassIdErr != nil {
+        fmt.Println(bassIdErr)
+        return 0, errors.New(fmt.Sprintf("%v", bassIdErr))
+    }
+
+    var newBait int
+    for _, id := range bassIds {
+        index := id - 1 // Adjust for 0 indexing
+        BassMap[user][index].Kind = "DELETE"
+        newBait += 3
+    }
+
+    BassMap[user] = collapseStash(user)
+    UserBait[user] = UserBait[user] + newBait
+
+    return newBait, nil
+}
+
+// Validates that a given list of bassIds are all clean and match a bass the user has.
+func validateBassIdList(user string, bassIds []int) (bool, error) {
+    for _, id := range bassIds {
+        if id < 1 {
+            return false, errors.New(fmt.Sprintf("Bass ID too low (minimum is 1): %v", id))
+        } else if id > len(BassMap[user]) {
+            return false, errors.New(fmt.Sprintf("Bass ID (%v) exceeds user's (%v) stash size (%v).", id, user, len(BassMap[user])))
+        }
+    }
+
+    return true, nil
 }
 
 // Removes all Bass marked for deletion
