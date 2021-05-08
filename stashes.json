@@ -2,35 +2,67 @@
     "Clant": [
         {
             "Kind": "Redeye",
-            "Size": 44
-        },
-        {
-            "Kind": "Largemouth",
             "Size": 45
         },
         {
-            "Kind": "Smallmouth",
-            "Size": 44
+            "Kind": "Largemouth",
+            "Size": 47
         },
         {
             "Kind": "Shoal",
-            "Size": 42
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 44
-        },
-        {
-            "Kind": "Spotted",
-            "Size": 21
-        },
-        {
-            "Kind": "Smallmouth",
             "Size": 34
         },
         {
+            "Kind": "Smallmouth",
+            "Size": 31
+        },
+        {
             "Kind": "Redeye",
+            "Size": 41
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 31
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 26
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 48
+        },
+        {
+            "Kind": "Smallmouth",
+            "Size": 47
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 45
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 50
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 39
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 23
+        },
+        {
+            "Kind": "Smallmouth",
             "Size": 46
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 34
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 22
         }
     ],
     "Forest": [
@@ -40,131 +72,59 @@
         },
         {
             "Kind": "Smallmouth",
-            "Size": 44
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 45
-        },
-        {
-            "Kind": "Spotted",
-            "Size": 45
-        },
-        {
-            "Kind": "Redeye",
-            "Size": 42
+            "Size": 48
         },
         {
             "Kind": "Shoal",
-            "Size": 45
+            "Size": 49
         },
         {
-            "Kind": "Largemouth",
-            "Size": 45
+            "Kind": "Shoal",
+            "Size": 47
         },
         {
-            "Kind": "Smallmouth",
-            "Size": 29
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 33
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 25
+            "Kind": "Shoal",
+            "Size": 50
         },
         {
             "Kind": "Redeye",
-            "Size": 27
+            "Size": 34
         }
     ],
     "KaiserSose": [
         {
             "Kind": "Spotted",
+            "Size": 50
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 50
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 50
+        },
+        {
+            "Kind": "Redeye",
             "Size": 36
         },
         {
-            "Kind": "Shoal",
-            "Size": 38
+            "Kind": "Smallmouth",
+            "Size": 47
         },
         {
-            "Kind": "Shoal",
-            "Size": 36
+            "Kind": "Smallmouth",
+            "Size": 39
         },
         {
             "Kind": "Largemouth",
-            "Size": 45
-        },
-        {
-            "Kind": "Spotted",
-            "Size": 25
-        },
-        {
-            "Kind": "Spotted",
             "Size": 26
-        },
-        {
-            "Kind": "Redeye",
-            "Size": 30
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 32
-        },
-        {
-            "Kind": "Shoal",
-            "Size": 24
-        },
-        {
-            "Kind": "Shoal",
-            "Size": 20
-        },
-        {
-            "Kind": "Redeye",
-            "Size": 43
-        },
-        {
-            "Kind": "Redeye",
-            "Size": 42
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 41
-        },
-        {
-            "Kind": "Shoal",
-            "Size": 34
-        },
-        {
-            "Kind": "Spotted",
-            "Size": 29
-        },
-        {
-            "Kind": "Spotted",
-            "Size": 33
-        },
-        {
-            "Kind": "Redeye",
-            "Size": 44
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 35
-        },
-        {
-            "Kind": "Shoal",
-            "Size": 34
         }
     ],
     "expnch": [
         {
-            "Kind": "Smallmouth",
-            "Size": 46
-        },
-        {
-            "Kind": "Smallmouth",
-            "Size": 42
+            "Kind": "Redeye",
+            "Size": 50
         }
     ],
     "nocturne": [
