@@ -99,21 +99,21 @@ func init() {
 	UserCooldowns = make(map[string]int64)
 	UserCharges = make(map[string]float32)
 	UserBait = make(map[string]int)
-    CurrentWeather = "mist"
+	CurrentWeather = "mist"
 	R = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Load once at init to save O(n) time whenever we need to look up rarity for a Bass Kind
 	// This is better than searching through map from getBassKinds() every single time, which
 	// can be O(n^2) if doing for a list of Bass. This is not data duplication because the
 	// 'source of truth' is still getBassKinds()
-    fmt.Println("loading bass-to-rarity...")
-    BassKindToRarity = make(map[string]string)
+	fmt.Println("loading bass-to-rarity...")
+	BassKindToRarity = make(map[string]string)
 	for rarity, kinds := range getBassKinds() {
 		for _, kind := range kinds {
 			BassKindToRarity[kind] = rarity
 		}
 	}
-    fmt.Println("loaded bass-to-rarity")
+	fmt.Println("loaded bass-to-rarity")
 }
 
 func main() {
@@ -158,12 +158,12 @@ func main() {
 	if !NoGreet {
 		for guildID := range GuildToBassChannelID {
 			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("__New Shit__\n"+
-            "**Rare bass:** New kinds of bass are in the waters. Catch 9 new uncommon bass, 4 new rare bass, and 3 new epic bass.\n"+
-            "**Weather:** Weather will change every 3 hours. Check the current status with `weather`. \n"+
-            "**Bait system:** Make and use bait to power up your casts. \n"+
+				"**Rare bass:** New kinds of bass are in the waters. Catch 9 new uncommon bass, 4 new rare bass, and 3 new epic bass.\n"+
+				"**Weather:** Weather will change every 3 hours. Check the current status with `weather`. \n"+
+				"**Bait system:** Make and use bait to power up your casts. \n"+
 				"* Create bait charges from bass with `make-bait <x1> <x2> ...`. Each bass grants 3 charges.\n"+
 				"* Use bait by typing the bait type after `fish`. Use `bait help` for a list of bait types.\n"+
-                "* Using bait increases your chances of catching a rare and/or large bass."))
+				"* Using bait increases your chances of catching a rare and/or large bass."))
 		}
 	}
 
@@ -178,7 +178,7 @@ func main() {
 			CurrentWeather = weatherTypes[weatherIndex]
 			fmt.Println("Weather updated to: %v", CurrentWeather)
 			for guildID := range GuildToBassChannelID {
-                fmt.Println(guildID)
+				fmt.Println(guildID)
 				dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint(getWeatherMap()[CurrentWeather].Message))
 			}
 			time.Sleep(180 * time.Minute)
@@ -226,7 +226,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID,
 			fmt.Sprintf("Bait options: %v \n"+
 				"Type the kind of bait you want to use after the fish command. Ex. `fish jig lure`",
-                "'" + strings.Join(getBaitKinds(), "', '") + "'"))
+				"'"+strings.Join(getBaitKinds(), "', '")+"'"))
 		return
 	}
 
@@ -235,17 +235,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-    if messageLowerCase == "weather" {
-        fmt.Println(fmt.Sprintf("weather %v %v", CurrentWeather, getWeatherMap()[CurrentWeather]))
-        s.ChannelMessageSend(m.ChannelID, getWeatherMap()[CurrentWeather].Message)
-        return
-    }
+	if messageLowerCase == "weather" {
+		fmt.Println(fmt.Sprintf("weather %v %v", CurrentWeather, getWeatherMap()[CurrentWeather]))
+		s.ChannelMessageSend(m.ChannelID, getWeatherMap()[CurrentWeather].Message)
+		return
+	}
 
-    if messageLowerCase == "freefish" {
-        fmt.Println(fmt.Sprintf("%v got a free cast", m.Author.Username))
-        UserCharges[m.Author.Username]++
-        return
-    }
+	if messageLowerCase == "freefish" {
+		fmt.Println(fmt.Sprintf("%v got a free cast", m.Author.Username))
+		UserCharges[m.Author.Username]++
+		return
+	}
 
 	if strings.HasPrefix(messageLowerCase, "fish") {
 		scrubbed := scrubMessage(messageLowerCase)
@@ -266,9 +266,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 
-
 		strength := getStrengthFromBait(bait)
-        fmt.Println("Got '" + strength + "' from bait: " + bait)
+		fmt.Println("Got '" + strength + "' from bait: " + bait)
 		caughtBass, rarity, castErr := cast(strength)
 
 		if castErr != nil {
@@ -371,9 +370,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		stash := "**bass stash** - List all of the fine bass you have caught."
 		eat := "**eat <x1> <x2> ...** - Eat the chosen bass to gain energy for an extra cast. Gain 0.5 casts for every bass. Hourly timer is not affected. *Ex.* `eat 7 3 4` eats bass numbers 7, 3, and 4 as identified by `bass stash` and grants 1.5 extra casts."
 		makeBait := "**make-bait <x1> <x2> ...** - Turn the chosen bass into bait charges to make your casts more powerful. Each bass grants 3 bait charges."
-        baitHelp := "**bait help** - Display the kinds of bait."
+		baitHelp := "**bait help** - Display the kinds of bait."
 		casts := "**casts** - Display how many cast and bait charges you have."
-        weather := "**weather** - Displays the current weather."
+		weather := "**weather** - Displays the current weather."
 		leaderboard := "**leaderboard** - List the top three bass."
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", baitHelp, "\n", casts, "\n", weather, "\n", leaderboard))
 		return
@@ -404,7 +403,7 @@ func cast(strength string) (Bass, string, error) {
 	size := randInt(castMin, castMax)
 	bassRarity := rollForRarity(strength)
 	kindOptions := getBassKinds()[bassRarity]
-	kind := kindOptions[randInt(0, len(kindOptions) - 1)]
+	kind := kindOptions[randInt(0, len(kindOptions)-1)]
 	bass := Bass{Size: size, Kind: kind}
 
 	fmt.Println(fmt.Sprintf("\tflip: %v, strength: %v, castMin: %v, castMax: %v, rarity: %v, size: %v, kind: %v",
@@ -437,8 +436,8 @@ func rollForRarity(strength string) string {
 	if strength == "critical" {
 		diceMin = 75
 	} else if strength == "strong" {
-        diceMin = 20
-    }
+		diceMin = 20
+	}
 	diceRoll := randInt(diceMin, epicRoll)
 	if diceRoll < uncommonRoll {
 		rarity = "common"
@@ -481,7 +480,7 @@ func getStrengthFromBait(bait string) string {
 			break
 		}
 	}
-    // bait != "" is to prevent auto-crit if getWeatherMap() gives a default value
+	// bait != "" is to prevent auto-crit if getWeatherMap() gives a default value
 	if bait != "" && bait == getWeatherMap()[CurrentWeather].Bait {
 		strength = "critical"
 	}
@@ -491,17 +490,17 @@ func getStrengthFromBait(bait string) string {
 
 func usersBassStashString(user string) string {
 	rarityMap := make(map[string][]string)
-    sep := " .... "
+	sep := " .... "
 	for i, bass := range BassMap[user] {
 		rarity := BassKindToRarity[bass.Kind]
 		rarityMap[rarity] = append(rarityMap[rarity], fmt.Sprintf("#**%v** *%v* (%vcm)", i+1, bass.Kind, bass.Size))
 	}
 
 	stashString := fmt.Sprintf("**%v's Bass Stash**\n", user)
-    stashString += fmt.Sprintf(":purple_circle: __Epic__: %v\n", strings.Join(rarityMap["epic"], sep))
-    stashString += fmt.Sprintf(":green_circle: __Rare__: %v\n", strings.Join(rarityMap["rare"], sep))
-    stashString += fmt.Sprintf(":yellow_circle: __Uncommon__: %v\n", strings.Join(rarityMap["uncommon"], sep))
-    stashString += fmt.Sprintf(":white_circle: __Common__: %v\n", strings.Join(rarityMap["common"], sep))
+	stashString += fmt.Sprintf(":purple_circle: __Epic__: %v\n", strings.Join(rarityMap["epic"], sep))
+	stashString += fmt.Sprintf(":green_circle: __Rare__: %v\n", strings.Join(rarityMap["rare"], sep))
+	stashString += fmt.Sprintf(":yellow_circle: __Uncommon__: %v\n", strings.Join(rarityMap["uncommon"], sep))
+	stashString += fmt.Sprintf(":white_circle: __Common__: %v\n", strings.Join(rarityMap["common"], sep))
 	return stashString
 }
 
@@ -510,12 +509,12 @@ func catchString(username string, caughtBass Bass, rarity string, strength strin
 	if strength == "critical" {
 		catchString = ":zap: *Critical cast!* :zap:\n"
 	} else if strength == "strong" {
-        catchString = "Nice cast!\n"
-    }
+		catchString = "Nice cast!\n"
+	}
 
 	switch rarity {
 	case "common":
-        catchString += fmt.Sprintf(":white_circle: %v caught a %vcm %v bass.", username, caughtBass.Size, caughtBass.Kind)
+		catchString += fmt.Sprintf(":white_circle: %v caught a %vcm %v bass.", username, caughtBass.Size, caughtBass.Kind)
 	case "uncommon":
 		catchString += fmt.Sprintf(":yellow_circle: %v caught a %vcm %v %v bass!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
