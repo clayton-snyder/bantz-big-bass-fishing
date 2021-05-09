@@ -256,9 +256,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		quantity, err := strconv.Atoi(tokens[2])
 		resource := tokens[3]
 
-        if err != nil {
-            return
-        }
+		if err != nil {
+			return
+		}
 
 		// UserCharges, UserBait
 		if grantee == "Everyone" {
