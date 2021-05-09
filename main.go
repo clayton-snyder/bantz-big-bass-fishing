@@ -138,7 +138,6 @@ func main() {
 	}
 
 	fmt.Println("Bot runnin'. ^C to exit.")
-
 	// For every guild the bot is in, find and map the 'bass-fishing''s channel ID
 	for _, guild := range dg.State.Guilds {
 		fmt.Println(fmt.Sprintf("Checking guild %v", guild.ID))
@@ -245,6 +244,44 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		fmt.Println(fmt.Sprintf("%v got a free cast", m.Author.Username))
 		UserCharges[m.Author.Username]++
 		return
+	}
+
+	if strings.HasPrefix(messageLowerCase, "grant") {
+		tokens := strings.Split(messageLowerCase, " ")
+		if m.Author.Username != "Clant" {
+			return
+		}
+
+		grantee := tokens[1]
+		quantity, err := strconv.Atoi(tokens[2])
+		resource := tokens[3]
+
+        if err != nil {
+            return
+        }
+
+		// UserCharges, UserBait
+		if grantee == "Everyone" {
+			for user, _ := range UserCharges {
+				if resource == "casts" {
+					UserCharges[user] += float32(quantity)
+				} else if resource == "bait" {
+					UserBait[user] += quantity
+				}
+			}
+		} else {
+			if resource == "casts" {
+				UserCharges[grantee] += float32(quantity)
+			} else if resource == "bait" {
+				UserBait[grantee] += quantity
+			}
+		}
+
+		if len(tokens) > 4 && tokens[5] == "notify" {
+			for _, channelID := range GuildToBassChannelID {
+				s.ChannelMessageSend(channelID, fmt.Sprintf("%v has been granted %v %v.", grantee, quantity, resource))
+			}
+		}
 	}
 
 	if strings.HasPrefix(messageLowerCase, "fish") {
