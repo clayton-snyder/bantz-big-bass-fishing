@@ -246,8 +246,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if strings.HasPrefix(messageLowerCase, "grant") {
-		tokens := strings.Split(messageLowerCase, " ")
+	if strings.HasPrefix(m.Content, "grant") {
+		tokens := strings.Split(m.Content, " ")
 		if m.Author.Username != "Clant" {
 			return
 		}
