@@ -24,6 +24,12 @@ type Bass struct {
 	Size int
 }
 
+type DexEntry struct {
+	Caught        bool
+	LargestCaught int
+	FirstCaught   time.Time
+}
+
 type WeatherInfo struct {
 	Bait, Message string
 }
@@ -34,10 +40,10 @@ const castCooldown = 3600000000000 // in nanoseconds, 1hr
 
 func getBassKinds() map[string][]string {
 	BassKinds := make(map[string][]string)
-	BassKinds["common"] = []string{"Largemouth", "Smallmouth", "Spotted", "Redeye", "Shoal"}
-	BassKinds["uncommon"] = []string{"Alabama", "Kentucky", "Florida", "Bartram's", "Choctaw", "Cahaba", "Chattahoochee", "Autstralian", "Ozark"}
-	BassKinds["rare"] = []string{"Guadalupe", "Chilean", "Japanese", "Giant"}
-	BassKinds["epic"] = []string{"Albino", "Warrior", "Strange"}
+	BassKinds["Common"] = []string{"Largemouth", "Smallmouth", "Spotted", "Redeye", "Shoal"}
+	BassKinds["Uncommon"] = []string{"Alabama", "Kentucky", "Florida", "Bartram's", "Choctaw", "Cahaba", "Chattahoochee", "Autstralian", "Ozark"}
+	BassKinds["Rare"] = []string{"Guadalupe", "Chilean", "Japanese", "Giant"}
+	BassKinds["Epic"] = []string{"Albino", "Warrior", "Strange"}
 	return BassKinds
 }
 
@@ -86,6 +92,7 @@ var (
 	CurrentWeather       string
 	R                    *rand.Rand
 	BassKindToRarity     map[string]string
+	UserDex              map[string]map[string]DexEntry
 )
 
 func init() {
@@ -93,7 +100,7 @@ func init() {
 	flag.BoolVar(&NoGreet, "no-greet", false, "Suppress greeting message when bot comes online")
 	flag.Parse()
 	ChannelID = "-1"
-	fmt.Println("Parsed NoGreet as %v", NoGreet)
+	fmt.Printf("Parsed NoGreet as %v \n", NoGreet)
 	GuildToBassChannelID = make(map[string]string)
 	BassMap = make(map[string][]Bass)
 	UserCooldowns = make(map[string]int64)
@@ -101,6 +108,7 @@ func init() {
 	UserBait = make(map[string]int)
 	CurrentWeather = "mist"
 	R = rand.New(rand.NewSource(time.Now().UnixNano()))
+	UserDex = make(map[string]map[string]DexEntry)
 
 	// Load once at init to save O(n) time whenever we need to look up rarity for a Bass Kind
 	// This is better than searching through map from getBassKinds() every single time, which
@@ -477,15 +485,15 @@ func rollForRarity(strength string) string {
 	}
 	diceRoll := randInt(diceMin, epicRoll)
 	if diceRoll < uncommonRoll {
-		rarity = "common"
+		rarity = "Common"
 	} else if diceRoll < rareRoll {
-		rarity = "uncommon"
+		rarity = "Uncommon"
 	} else if diceRoll < epicRoll {
-		rarity = "rare"
+		rarity = "Rare"
 	} else if diceRoll == epicRoll {
-		rarity = "epic"
+		rarity = "Epic"
 	} else {
-		rarity = "common"
+		rarity = "Common"
 	}
 	return rarity
 }
@@ -534,10 +542,10 @@ func usersBassStashString(user string) string {
 	}
 
 	stashString := fmt.Sprintf("**%v's Bass Stash**\n", user)
-	stashString += fmt.Sprintf(":purple_circle: __Epic__: %v\n", strings.Join(rarityMap["epic"], sep))
-	stashString += fmt.Sprintf(":green_circle: __Rare__: %v\n", strings.Join(rarityMap["rare"], sep))
-	stashString += fmt.Sprintf(":yellow_circle: __Uncommon__: %v\n", strings.Join(rarityMap["uncommon"], sep))
-	stashString += fmt.Sprintf(":white_circle: __Common__: %v\n", strings.Join(rarityMap["common"], sep))
+	stashString += fmt.Sprintf(":purple_circle: __Epic__: %v\n", strings.Join(rarityMap["Epic"], sep))
+	stashString += fmt.Sprintf(":green_circle: __Rare__: %v\n", strings.Join(rarityMap["Rare"], sep))
+	stashString += fmt.Sprintf(":yellow_circle: __Uncommon__: %v\n", strings.Join(rarityMap["Uncommon"], sep))
+	stashString += fmt.Sprintf(":white_circle: __Common__: %v\n", strings.Join(rarityMap["Common"], sep))
 	return stashString
 }
 
@@ -550,15 +558,15 @@ func catchString(username string, caughtBass Bass, rarity string, strength strin
 	}
 
 	switch rarity {
-	case "common":
+	case "Common":
 		catchString += fmt.Sprintf(":white_circle: %v caught a %vcm %v bass.", username, caughtBass.Size, caughtBass.Kind)
-	case "uncommon":
+	case "Uncommon":
 		catchString += fmt.Sprintf(":yellow_circle: %v caught a %vcm %v %v bass!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
-	case "rare":
+	case "Rare":
 		catchString += fmt.Sprintf(":green_circle: %v caught a %vcm %v %v bass!!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
-	case "epic":
+	case "Epic":
 		catchString += fmt.Sprintf(":purple_circle: %v caught a %vcm **%v %v bass**!!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
 	default:
@@ -634,6 +642,33 @@ func collapseStash(user string) []Bass {
 	}
 
 	return collapsed
+}
+
+func updateDex(user string, newBass Bass) bool {
+	updated := false
+	dexEntry := UserDex[user][newBass.Kind]
+	fmt.Printf("updateDex: loaded existing(%v), new is (%v/%v)\n", dexEntry.LargestCaught, newBass.Kind, newBass.Size)
+
+	if dexEntry.Caught {
+		if dexEntry.LargestCaught > newBass.Size {
+			dexEntry.LargestCaught = newBass.Size
+			UserDex[user][newBass.Kind] = dexEntry
+			updated = true
+		}
+	} else {
+		dexEntry.Caught = true
+		dexEntry.LargestCaught = newBass.Size
+		dexEntry.FirstCaught = time.Now()
+		updated = true
+	}
+
+	fmt.Printf("updateDex: newEntry is %v / %v / %v \n", dexEntry.Caught, dexEntry.LargestCaught, dexEntry.FirstCaught)
+	return updated
+}
+
+func dexString(user string) string {
+	// TODO
+	return ""
 }
 
 func load() {
