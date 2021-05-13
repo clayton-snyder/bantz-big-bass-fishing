@@ -24,6 +24,12 @@ type Bass struct {
 	Size int
 }
 
+type DexEntry struct {
+	Caught        bool
+	LargestCaught int
+	FirstCaught   time.Time
+}
+
 type WeatherInfo struct {
 	Bait, Message string
 }
@@ -31,13 +37,14 @@ type WeatherInfo struct {
 const defaultMin, defaultRange, defaultMax = 20, 31, 69
 const strongBoost, critBoost = 15, 25
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
+const layoutUS = "January 2, 2006"
 
 func getBassKinds() map[string][]string {
 	BassKinds := make(map[string][]string)
-	BassKinds["common"] = []string{"Largemouth", "Smallmouth", "Spotted", "Redeye", "Shoal"}
-	BassKinds["uncommon"] = []string{"Alabama", "Kentucky", "Florida", "Bartram's", "Choctaw", "Cahaba", "Chattahoochee", "Autstralian", "Ozark"}
-	BassKinds["rare"] = []string{"Guadalupe", "Chilean", "Japanese", "Giant"}
-	BassKinds["epic"] = []string{"Albino", "Warrior", "Strange"}
+	BassKinds["Epic"] = []string{"Albino", "Warrior", "Strange"}
+	BassKinds["Rare"] = []string{"Guadalupe", "Chilean", "Japanese", "Giant"}
+	BassKinds["Uncommon"] = []string{"Alabama", "Kentucky", "Florida", "Bartram's", "Choctaw", "Cahaba", "Chattahoochee", "Autstralian", "Ozark"}
+	BassKinds["Common"] = []string{"Largemouth", "Smallmouth", "Spotted", "Redeye", "Shoal"}
 	return BassKinds
 }
 
@@ -67,6 +74,21 @@ func stringArrContains(stringArr []string, inVal string) bool {
 	return false
 }
 
+// This is just to be run one time to populate Dexes from current stash. No need to keep it after
+// the first time Dexes are deployed.
+func loadBassDexes() {
+	for user, stash := range BassMap {
+		for _, bass := range stash {
+			updateDex(user, bass)
+		}
+	}
+	save()
+	fmt.Println("Loaded. Here's the dexes...")
+	for user, dex := range UserDex {
+		fmt.Printf("%v: %v \n", user, dex)
+	}
+}
+
 // Returns rand # in range [min, max]. Maybe max should be exclusive, which is more of a standard
 // across languages, but this is much easier to use and understand for this app's purposes, IMO.
 func randInt(min int, max int) int {
@@ -86,6 +108,7 @@ var (
 	CurrentWeather       string
 	R                    *rand.Rand
 	BassKindToRarity     map[string]string
+	UserDex              map[string]map[string]DexEntry
 )
 
 func init() {
@@ -93,7 +116,7 @@ func init() {
 	flag.BoolVar(&NoGreet, "no-greet", false, "Suppress greeting message when bot comes online")
 	flag.Parse()
 	ChannelID = "-1"
-	fmt.Println("Parsed NoGreet as %v", NoGreet)
+	fmt.Printf("Parsed NoGreet as %v \n", NoGreet)
 	GuildToBassChannelID = make(map[string]string)
 	BassMap = make(map[string][]Bass)
 	UserCooldowns = make(map[string]int64)
@@ -101,6 +124,7 @@ func init() {
 	UserBait = make(map[string]int)
 	CurrentWeather = "mist"
 	R = rand.New(rand.NewSource(time.Now().UnixNano()))
+	UserDex = make(map[string]map[string]DexEntry)
 
 	// Load once at init to save O(n) time whenever we need to look up rarity for a Bass Kind
 	// This is better than searching through map from getBassKinds() every single time, which
@@ -156,13 +180,12 @@ func main() {
 
 	if !NoGreet {
 		for guildID := range GuildToBassChannelID {
-			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("__New Shit__\n"+
-				"**Rare bass:** New kinds of bass are in the waters. Catch 9 new uncommon bass, 4 new rare bass, and 3 new epic bass.\n"+
-				"**Weather:** Weather will change every 3 hours. Check the current status with `weather`. \n"+
-				"**Bait system:** Make and use bait to power up your casts. \n"+
-				"* Create bait charges from bass with `make-bait <x1> <x2> ...`. Each bass grants 3 charges.\n"+
-				"* Use bait by typing the bait type after `fish`. Use `bait help` for a list of bait types.\n"+
-				"* Using bait increases your chances of catching a rare and/or large bass."))
+			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("__Update: Bass Dex__\n"+
+				"As you catch Bass, they will be recorded in your Bass Dex. Your Dex will track the first time "+
+				"you caught a given Bass, as well as the largest Bass of that kind you've ever caught (your 'PR'). \n"+
+				"Your Dex will also show :question: in place of any Bass kinds you have not yet caught.\n"+
+				"Use `bassdex` or `dex` to view your Dex. Add someone's name after to view their's. \n"+
+				"Everyone's Dex has been initialized with the Bass in your current stash and with today's date."))
 		}
 	}
 
@@ -208,6 +231,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	messageLowerCase := strings.TrimSpace(strings.ToLower(m.Content))
 
+	if messageLowerCase == "loaddex" {
+		loadBassDexes()
+		fmt.Println("Loaded.")
+		return
+	}
+
 	if messageLowerCase == "hey" {
 		fmt.Println(m.Author.Username + "hey")
 		s.ChannelMessageSend(m.ChannelID, "sup")
@@ -229,7 +258,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if messageLowerCase == "mario" {
+	if strings.HasPrefix(messageLowerCase, "mario") {
 		s.ChannelMessageSend(m.ChannelID, "Thank you so much for a-playing my game!")
 		return
 	}
@@ -320,14 +349,32 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		BassMap[m.Author.Username] = append(BassMap[m.Author.Username], caughtBass)
+		updateDex(m.Author.Username, caughtBass)
 		save()
 		s.ChannelMessageSend(m.ChannelID, catchString(m.Author.Username, caughtBass, rarity, strength))
 		return
 	}
 
-	if messageLowerCase == "bass stash" {
+	if messageLowerCase == "bass stash" || messageLowerCase == "stash" || messageLowerCase == "bassstash" {
 		fmt.Println(m.Author.Username + " bass stash")
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(usersBassStashString(m.Author.Username)))
+		return
+	}
+
+	if strings.HasPrefix(messageLowerCase, "bassdex") || strings.HasPrefix(messageLowerCase, "dex") {
+		tokens := strings.SplitN(scrubMessage(m.Content), " ", 2)
+		user := m.Author.Username
+		if len(tokens) > 1 {
+			user = tokens[1]
+		}
+
+		if len(UserDex[user]) == 0 {
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No user named '%v' has caught a bass.", user))
+			return
+		}
+
+		fmt.Println(m.Author.Username + " " + m.Content)
+		s.ChannelMessageSend(m.ChannelID, dexString(user))
 		return
 	}
 
@@ -410,8 +457,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		baitHelp := "**bait help** - Display the kinds of bait."
 		casts := "**casts** - Display how many cast and bait charges you have."
 		weather := "**weather** - Displays the current weather."
+		dex := "**bassdex <user>** - Displays the BassDex of the given user. Leave out <user> to display your own."
 		leaderboard := "**leaderboard** - List the top three bass."
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", baitHelp, "\n", casts, "\n", weather, "\n", leaderboard))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", baitHelp, "\n", casts, "\n", weather, "\n", dex, "\n", leaderboard))
 		return
 	}
 
@@ -477,15 +525,15 @@ func rollForRarity(strength string) string {
 	}
 	diceRoll := randInt(diceMin, epicRoll)
 	if diceRoll < uncommonRoll {
-		rarity = "common"
+		rarity = "Common"
 	} else if diceRoll < rareRoll {
-		rarity = "uncommon"
+		rarity = "Uncommon"
 	} else if diceRoll < epicRoll {
-		rarity = "rare"
+		rarity = "Rare"
 	} else if diceRoll == epicRoll {
-		rarity = "epic"
+		rarity = "Epic"
 	} else {
-		rarity = "common"
+		rarity = "Common"
 	}
 	return rarity
 }
@@ -534,10 +582,10 @@ func usersBassStashString(user string) string {
 	}
 
 	stashString := fmt.Sprintf("**%v's Bass Stash**\n", user)
-	stashString += fmt.Sprintf(":purple_circle: __Epic__: %v\n", strings.Join(rarityMap["epic"], sep))
-	stashString += fmt.Sprintf(":green_circle: __Rare__: %v\n", strings.Join(rarityMap["rare"], sep))
-	stashString += fmt.Sprintf(":yellow_circle: __Uncommon__: %v\n", strings.Join(rarityMap["uncommon"], sep))
-	stashString += fmt.Sprintf(":white_circle: __Common__: %v\n", strings.Join(rarityMap["common"], sep))
+	stashString += fmt.Sprintf(":purple_circle: __Epic__: %v\n", strings.Join(rarityMap["Epic"], sep))
+	stashString += fmt.Sprintf(":green_circle: __Rare__: %v\n", strings.Join(rarityMap["Rare"], sep))
+	stashString += fmt.Sprintf(":yellow_circle: __Uncommon__: %v\n", strings.Join(rarityMap["Uncommon"], sep))
+	stashString += fmt.Sprintf(":white_circle: __Common__: %v\n", strings.Join(rarityMap["Common"], sep))
 	return stashString
 }
 
@@ -550,15 +598,15 @@ func catchString(username string, caughtBass Bass, rarity string, strength strin
 	}
 
 	switch rarity {
-	case "common":
+	case "Common":
 		catchString += fmt.Sprintf(":white_circle: %v caught a %vcm %v bass.", username, caughtBass.Size, caughtBass.Kind)
-	case "uncommon":
+	case "Uncommon":
 		catchString += fmt.Sprintf(":yellow_circle: %v caught a %vcm %v %v bass!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
-	case "rare":
+	case "Rare":
 		catchString += fmt.Sprintf(":green_circle: %v caught a %vcm %v %v bass!!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
-	case "epic":
+	case "Epic":
 		catchString += fmt.Sprintf(":purple_circle: %v caught a %vcm **%v %v bass**!!",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
 	default:
@@ -636,6 +684,86 @@ func collapseStash(user string) []Bass {
 	return collapsed
 }
 
+func updateDex(user string, newBass Bass) bool {
+	updated := false
+	dexEntry := UserDex[user][newBass.Kind]
+	fmt.Printf("updateDex for %v: loaded existing(%v), new is (%v/%v)\n", user, dexEntry.LargestCaught, newBass.Kind, newBass.Size)
+
+	if dexEntry.Caught {
+		if newBass.Size > dexEntry.LargestCaught {
+			dexEntry.LargestCaught = newBass.Size
+			UserDex[user][newBass.Kind] = dexEntry
+			updated = true
+		}
+	} else {
+		dexEntry.Caught = true
+		dexEntry.LargestCaught = newBass.Size
+		dexEntry.FirstCaught = time.Now()
+
+		// This is necessary due to Go weirdness; apparently "A nil map behaves like an empty map when reading,
+		// but attempts to write to a nil map will cause a runtime panic". https://blog.golang.org/maps
+		// So if this a user's first DexEntry, we have to make() it first
+		if len(UserDex[user]) == 0 {
+			UserDex[user] = make(map[string]DexEntry)
+		}
+		UserDex[user][newBass.Kind] = dexEntry
+		updated = true
+	}
+
+	fmt.Printf("updateDex: newEntry is %v / %v / %v \n", dexEntry.Caught, dexEntry.LargestCaught, dexEntry.FirstCaught)
+	return updated
+}
+
+func userDexRarityComplete(user string, rarity string) bool {
+	kinds := getBassKinds()[rarity]
+	if len(kinds) == 0 {
+		fmt.Printf("Got invalid rarity: %v \n", rarity)
+		return false
+	}
+
+	for _, kind := range kinds {
+		if !UserDex[user][kind].Caught {
+			return false
+		}
+	}
+
+	return true
+}
+
+func dexString(user string) string {
+	fmt.Printf("%v \n", UserDex[user])
+	dexString := fmt.Sprintf("__%v's BassDex__\n\n", user)
+
+	rarityHeaders := make(map[string]string)
+	rarityHeaders["Epic"] = ":purple_circle: EPIC :purple_circle: "
+	rarityHeaders["Rare"] = ":green_circle: RARE :green_circle: "
+	rarityHeaders["Uncommon"] = ":yellow_circle: UNCOMMON :yellow_circle: "
+	rarityHeaders["Common"] = ":white_circle: COMMON :white_circle: "
+	rarityOrder := []string{"Epic", "Rare", "Uncommon", "Common"}
+
+	for _, rarity := range rarityOrder {
+		if userDexRarityComplete(user, rarity) {
+			dexString += ":star:   "
+		}
+		dexString += rarityHeaders[rarity]
+		var rarityEntries []string
+		for _, kind := range getBassKinds()[rarity] {
+			dexEntry := UserDex[user][kind]
+			if dexEntry.Caught {
+				rarityEntries = append(rarityEntries, fmt.Sprintf("<[**%v** - *%v* - PR: %vcm]>", kind, dexEntry.FirstCaught.Format(layoutUS), dexEntry.LargestCaught))
+			} else {
+				rarityEntries = append(rarityEntries, "<[:question:]>")
+			}
+		}
+		dexString += strings.Join(rarityEntries, " ... ") + "\n"
+		if rarity != "Common" {
+			dexString += "\n"
+		}
+	}
+
+	return dexString
+}
+
 func load() {
 	fmt.Println("loading stashes from file...")
 	stashesFile, _ := ioutil.ReadFile("stashes.json")
@@ -657,6 +785,15 @@ func load() {
 	for key, charges := range UserBait {
 		fmt.Println(fmt.Sprintf("%v: %v", key, charges))
 	}
+
+	fmt.Println("loading dexes from file...")
+	dexFile, _ := ioutil.ReadFile("dexes.json")
+
+	json.Unmarshal([]byte(dexFile), &UserDex)
+	fmt.Println("Dexes load successful. Loaded UserDex:")
+	for user, dex := range UserDex {
+		fmt.Printf("%v: %v", user, dex)
+	}
 }
 
 func save() {
@@ -664,6 +801,8 @@ func save() {
 	_ = ioutil.WriteFile("stashes.json", stashFile, 0644)
 	baitFile, _ := json.MarshalIndent(UserBait, "", "    ")
 	_ = ioutil.WriteFile("bait_charges.json", baitFile, 0644)
+	dexFile, _ := json.MarshalIndent(UserDex, "", "    ")
+	_ = ioutil.WriteFile("dexes.json", dexFile, 0644)
 }
 
 // Bait types: fly fishing, lure - jig, lure - spoon, lure - spinner, lure -crankbait, lure - plug, powerbait - plain, powerbait - glitter, worm, minnow, crayfish, cricket, frog, offal
