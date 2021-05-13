@@ -1,0 +1,234 @@
+{
+    "Clant": {
+        "Alabama": {
+            "Caught": true,
+            "LargestCaught": 58,
+            "FirstCaught": "2021-05-13T01:16:28.813425617Z"
+        },
+        "Autstralian": {
+            "Caught": true,
+            "LargestCaught": 67,
+            "FirstCaught": "2021-05-13T01:16:28.813481577Z"
+        },
+        "Bartram's": {
+            "Caught": true,
+            "LargestCaught": 51,
+            "FirstCaught": "2021-05-13T01:16:28.81339279Z"
+        },
+        "Cahaba": {
+            "Caught": true,
+            "LargestCaught": 68,
+            "FirstCaught": "2021-05-13T01:16:28.813459972Z"
+        },
+        "Chattahoochee": {
+            "Caught": true,
+            "LargestCaught": 58,
+            "FirstCaught": "2021-05-13T01:16:28.813412771Z"
+        },
+        "Chilean": {
+            "Caught": true,
+            "LargestCaught": 27,
+            "FirstCaught": "2021-05-13T01:16:28.813498192Z"
+        },
+        "Choctaw": {
+            "Caught": true,
+            "LargestCaught": 49,
+            "FirstCaught": "2021-05-13T01:16:28.813419167Z"
+        },
+        "Japanese": {
+            "Caught": true,
+            "LargestCaught": 63,
+            "FirstCaught": "2021-05-13T01:16:28.81339988Z"
+        },
+        "Kentucky": {
+            "Caught": true,
+            "LargestCaught": 49,
+            "FirstCaught": "2021-05-13T01:16:28.813406402Z"
+        },
+        "Largemouth": {
+            "Caught": true,
+            "LargestCaught": 42,
+            "FirstCaught": "2021-05-13T01:16:28.813437049Z"
+        },
+        "Ozark": {
+            "Caught": true,
+            "LargestCaught": 63,
+            "FirstCaught": "2021-05-13T01:16:28.813468816Z"
+        },
+        "Redeye": {
+            "Caught": true,
+            "LargestCaught": 39,
+            "FirstCaught": "2021-05-13T01:16:28.813539359Z"
+        },
+        "Shoal": {
+            "Caught": true,
+            "LargestCaught": 55,
+            "FirstCaught": "2021-05-13T01:16:28.813443282Z"
+        },
+        "Smallmouth": {
+            "Caught": true,
+            "LargestCaught": 58,
+            "FirstCaught": "2021-05-13T01:16:28.813475204Z"
+        },
+        "Spotted": {
+            "Caught": true,
+            "LargestCaught": 45,
+            "FirstCaught": "2021-05-13T01:16:28.813449595Z"
+        }
+    },
+    "Forest": {
+        "Albino": {
+            "Caught": true,
+            "LargestCaught": 68,
+            "FirstCaught": "2021-05-13T01:16:28.813622844Z"
+        },
+        "Chilean": {
+            "Caught": true,
+            "LargestCaught": 66,
+            "FirstCaught": "2021-05-13T01:16:28.813615885Z"
+        },
+        "Japanese": {
+            "Caught": true,
+            "LargestCaught": 58,
+            "FirstCaught": "2021-05-13T01:16:28.81362915Z"
+        },
+        "Smallmouth": {
+            "Caught": true,
+            "LargestCaught": 39,
+            "FirstCaught": "2021-05-13T01:16:28.813651647Z"
+        },
+        "Warrior": {
+            "Caught": true,
+            "LargestCaught": 20,
+            "FirstCaught": "2021-05-13T01:16:28.813640351Z"
+        }
+    },
+    "KaiserSose": {
+        "Cahaba": {
+            "Caught": true,
+            "LargestCaught": 52,
+            "FirstCaught": "2021-05-13T01:16:28.813216087Z"
+        },
+        "Chattahoochee": {
+            "Caught": true,
+            "LargestCaught": 53,
+            "FirstCaught": "2021-05-13T01:16:28.81319768Z"
+        },
+        "Chilean": {
+            "Caught": true,
+            "LargestCaught": 53,
+            "FirstCaught": "2021-05-13T01:16:28.813173834Z"
+        },
+        "Choctaw": {
+            "Caught": true,
+            "LargestCaught": 65,
+            "FirstCaught": "2021-05-13T01:16:28.813204489Z"
+        },
+        "Kentucky": {
+            "Caught": true,
+            "LargestCaught": 62,
+            "FirstCaught": "2021-05-13T01:16:28.813086494Z"
+        },
+        "Largemouth": {
+            "Caught": true,
+            "LargestCaught": 63,
+            "FirstCaught": "2021-05-13T01:16:28.813230644Z"
+        },
+        "Ozark": {
+            "Caught": true,
+            "LargestCaught": 67,
+            "FirstCaught": "2021-05-13T01:16:28.813190548Z"
+        },
+        "Redeye": {
+            "Caught": true,
+            "LargestCaught": 54,
+            "FirstCaught": "2021-05-13T01:16:28.813242338Z"
+        },
+        "Shoal": {
+            "Caught": true,
+            "LargestCaught": 61,
+            "FirstCaught": "2021-05-13T01:16:28.81322256Z"
+        }
+    },
+    "Nolan": {
+        "Alabama": {
+            "Caught": true,
+            "LargestCaught": 69,
+            "FirstCaught": "2021-05-13T01:16:28.813305044Z"
+        },
+        "Chilean": {
+            "Caught": true,
+            "LargestCaught": 66,
+            "FirstCaught": "2021-05-13T01:16:28.813286242Z"
+        },
+        "Giant": {
+            "Caught": true,
+            "LargestCaught": 65,
+            "FirstCaught": "2021-05-13T01:16:28.81333071Z"
+        },
+        "Guadalupe": {
+            "Caught": true,
+            "LargestCaught": 61,
+            "FirstCaught": "2021-05-13T01:16:28.813311398Z"
+        },
+        "Kentucky": {
+            "Caught": true,
+            "LargestCaught": 64,
+            "FirstCaught": "2021-05-13T01:16:28.813298434Z"
+        },
+        "Ozark": {
+            "Caught": true,
+            "LargestCaught": 67,
+            "FirstCaught": "2021-05-13T01:16:28.813324319Z"
+        },
+        "Redeye": {
+            "Caught": true,
+            "LargestCaught": 51,
+            "FirstCaught": "2021-05-13T01:16:28.813317928Z"
+        }
+    },
+    "expnch": {
+        "Chilean": {
+            "Caught": true,
+            "LargestCaught": 56,
+            "FirstCaught": "2021-05-13T01:16:28.813350451Z"
+        },
+        "Giant": {
+            "Caught": true,
+            "LargestCaught": 68,
+            "FirstCaught": "2021-05-13T01:16:28.813344051Z"
+        },
+        "Japanese": {
+            "Caught": true,
+            "LargestCaught": 57,
+            "FirstCaught": "2021-05-13T01:16:28.81335993Z"
+        },
+        "Ozark": {
+            "Caught": true,
+            "LargestCaught": 69,
+            "FirstCaught": "2021-05-13T01:16:28.813337161Z"
+        },
+        "Shoal": {
+            "Caught": true,
+            "LargestCaught": 26,
+            "FirstCaught": "2021-05-13T01:16:28.813366429Z"
+        }
+    },
+    "nocturne": {
+        "Chattahoochee": {
+            "Caught": true,
+            "LargestCaught": 68,
+            "FirstCaught": "2021-05-13T01:16:28.81337292Z"
+        },
+        "Japanese": {
+            "Caught": true,
+            "LargestCaught": 54,
+            "FirstCaught": "2021-05-13T01:16:28.813379838Z"
+        },
+        "Shoal": {
+            "Caught": true,
+            "LargestCaught": 69,
+            "FirstCaught": "2021-05-13T01:16:28.813386442Z"
+        }
+    }
+}
