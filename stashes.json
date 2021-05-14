@@ -29,14 +29,6 @@
             "Size": 22
         },
         {
-            "Kind": "Largemouth",
-            "Size": 31
-        },
-        {
-            "Kind": "Shoal",
-            "Size": 55
-        },
-        {
             "Kind": "Spotted",
             "Size": 45
         },
@@ -147,13 +139,29 @@
         {
             "Kind": "Smallmouth",
             "Size": 29
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 60
+        },
+        {
+            "Kind": "Albino",
+            "Size": 45
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 24
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 40
+        },
+        {
+            "Kind": "Florida",
+            "Size": 39
         }
     ],
     "Forest": [
-        {
-            "Kind": "Chilean",
-            "Size": 37
-        },
         {
             "Kind": "Albino",
             "Size": 68
@@ -171,8 +179,12 @@
             "Size": 20
         },
         {
-            "Kind": "Smallmouth",
-            "Size": 39
+            "Kind": "Chilean",
+            "Size": 48
+        },
+        {
+            "Kind": "Largemouth",
+            "Size": 43
         }
     ],
     "KaiserSose": [
@@ -247,6 +259,38 @@
         {
             "Kind": "Shoal",
             "Size": 24
+        },
+        {
+            "Kind": "Choctaw",
+            "Size": 39
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 47
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 22
+        },
+        {
+            "Kind": "Giant",
+            "Size": 51
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 63
+        },
+        {
+            "Kind": "Shoal",
+            "Size": 34
+        },
+        {
+            "Kind": "Chattahoochee",
+            "Size": 38
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 46
         }
     ],
     "Nolan": [
@@ -267,20 +311,20 @@
             "Size": 69
         },
         {
-            "Kind": "Guadalupe",
-            "Size": 61
-        },
-        {
-            "Kind": "Redeye",
-            "Size": 51
-        },
-        {
             "Kind": "Ozark",
             "Size": 67
         },
         {
             "Kind": "Giant",
             "Size": 65
+        },
+        {
+            "Kind": "Japanese",
+            "Size": 68
+        },
+        {
+            "Kind": "Bartram's",
+            "Size": 66
         }
     ],
     "expnch": [
@@ -301,8 +345,20 @@
             "Size": 57
         },
         {
-            "Kind": "Shoal",
-            "Size": 26
+            "Kind": "Strange",
+            "Size": 44
+        },
+        {
+            "Kind": "Chattahoochee",
+            "Size": 65
+        },
+        {
+            "Kind": "Chilean",
+            "Size": 38
+        },
+        {
+            "Kind": "Bartram's",
+            "Size": 58
         }
     ],
     "nocturne": [
@@ -317,6 +373,14 @@
         {
             "Kind": "Shoal",
             "Size": 69
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 58
+        },
+        {
+            "Kind": "Ozark",
+            "Size": 44
         }
     ]
 }
