@@ -232,6 +232,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	messageLowerCase := strings.TrimSpace(strings.ToLower(m.Content))
 	channelID := GuildToBassChannelID[m.GuildID]
 
+	// Don't respond to messages sent in channels other than #bass-fishing
+	if m.ChannelID != channelID {
+		return
+	}
+
 	if messageLowerCase == "loaddex" {
 		loadBassDexes()
 		fmt.Println("Loaded.")
