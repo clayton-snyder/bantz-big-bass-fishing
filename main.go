@@ -230,6 +230,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	messageLowerCase := strings.TrimSpace(strings.ToLower(m.Content))
+	channelID := GuildToBassChannelID[m.GuildID]
 
 	if messageLowerCase == "loaddex" {
 		loadBassDexes()
@@ -239,7 +240,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if messageLowerCase == "hey" {
 		fmt.Println(m.Author.Username + "hey")
-		s.ChannelMessageSend(m.ChannelID, "sup")
+		s.ChannelMessageSend(channelID, "sup")
 		return
 	}
 
@@ -251,7 +252,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if messageLowerCase == "bait help" {
-		s.ChannelMessageSend(m.ChannelID,
+		s.ChannelMessageSend(channelID,
 			fmt.Sprintf("Bait options: %v \n"+
 				"Type the kind of bait you want to use after the fish command. Ex. `fish jig lure`",
 				"'"+strings.Join(getBaitKinds(), "', '")+"'"))
@@ -259,13 +260,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(messageLowerCase, "mario") {
-		s.ChannelMessageSend(m.ChannelID, "Thank you so much for a-playing my game!")
+		s.ChannelMessageSend(channelID, "Thank you so much for a-playing my game!")
 		return
 	}
 
 	if messageLowerCase == "weather" {
 		fmt.Println(fmt.Sprintf("weather %v %v", CurrentWeather, getWeatherMap()[CurrentWeather]))
-		s.ChannelMessageSend(m.ChannelID, getWeatherMap()[CurrentWeather].Message)
+		s.ChannelMessageSend(channelID, getWeatherMap()[CurrentWeather].Message)
 		return
 	}
 
@@ -322,12 +323,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			bait = tokens[1]
 			if !stringArrContains(getBaitKinds(), bait) {
 				fmt.Println(fmt.Sprintf("Invalid bait type '%v' used by %v.", bait, m.Author.Username))
-				s.ChannelMessageSend(m.ChannelID, "Invalid bait type. Type `bait help` for a list.")
+				s.ChannelMessageSend(channelID, "Invalid bait type. Type `bait help` for a list.")
 				return
 			}
 			if UserBait[m.Author.Username] < 1 {
 				fmt.Println(fmt.Sprintf("%v tried to use bait with no charges.", m.Author.Username))
-				s.ChannelMessageSend(m.ChannelID, "You don't have any bait. Embarrassing!")
+				s.ChannelMessageSend(channelID, "You don't have any bait. Embarrassing!")
 				return
 			}
 		}
@@ -338,26 +339,26 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		if castErr != nil {
 			fmt.Println(m.Author.Username + "'s cast failed.")
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", castErr))
+			s.ChannelMessageSend(channelID, fmt.Sprintf("%v", castErr))
 			return
 		}
 
 		// Don't add the fish to the stash if payment is declined.
 		if !debitCast(m.Author.Username, bait != "") {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You can fish once per hour."))
+			s.ChannelMessageSend(channelID, fmt.Sprintf("You can fish once per hour."))
 			return
 		}
 
 		BassMap[m.Author.Username] = append(BassMap[m.Author.Username], caughtBass)
 		updateDex(m.Author.Username, caughtBass)
 		save()
-		s.ChannelMessageSend(m.ChannelID, catchString(m.Author.Username, caughtBass, rarity, strength))
+		s.ChannelMessageSend(channelID, catchString(m.Author.Username, caughtBass, rarity, strength))
 		return
 	}
 
 	if messageLowerCase == "bass stash" || messageLowerCase == "stash" || messageLowerCase == "bassstash" {
 		fmt.Println(m.Author.Username + " bass stash")
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(usersBassStashString(m.Author.Username)))
+		s.ChannelMessageSend(channelID, fmt.Sprint(usersBassStashString(m.Author.Username)))
 		return
 	}
 
@@ -369,18 +370,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if len(UserDex[user]) == 0 {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No user named '%v' has caught a bass.", user))
+			s.ChannelMessageSend(channelID, fmt.Sprintf("No user named '%v' has caught a bass.", user))
 			return
 		}
 
 		fmt.Println(m.Author.Username + " " + m.Content)
-		s.ChannelMessageSend(m.ChannelID, dexString(user))
+		s.ChannelMessageSend(channelID, dexString(user))
 		return
 	}
 
 	if messageLowerCase == "casts" || messageLowerCase == "bait" {
 		fmt.Println(m.Author.Username + " " + messageLowerCase)
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You have %v extra casts and %v bait charges.", UserCharges[m.Author.Username], UserBait[m.Author.Username]))
+		s.ChannelMessageSend(channelID, fmt.Sprintf("You have %v extra casts and %v bait charges.", UserCharges[m.Author.Username], UserBait[m.Author.Username]))
 		return
 	}
 
@@ -403,7 +404,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		first := fmt.Sprint(":first_place: "+allBass[0].Name+"'s ", allBass[0].Size, "cm "+allBass[0].Kind+" bass.")
 		second := fmt.Sprint(":second_place: "+allBass[1].Name+"'s ", allBass[1].Size, "cm "+allBass[1].Kind+" bass.")
 		third := fmt.Sprint(":third_place: "+allBass[2].Name+"'s ", allBass[2].Size, "cm "+allBass[2].Kind+" bass.")
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(first, "\n", second, "\n", third))
+		s.ChannelMessageSend(channelID, fmt.Sprint(first, "\n", second, "\n", third))
 		return
 	}
 
@@ -414,17 +415,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		if strParseErr != nil {
 			fmt.Println(fmt.Sprintf("%v", strParseErr))
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprint("Wrong."))
+			s.ChannelMessageSend(channelID, fmt.Sprint("Wrong."))
 			return
 		}
 
 		gainedCharges, err := userEatBass(m.Author.Username, bassIds)
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", err))
+			s.ChannelMessageSend(channelID, fmt.Sprintf("%v", err))
 			return
 		}
 
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You ate them down in one. Gained %v casts.", gainedCharges))
+		s.ChannelMessageSend(channelID, fmt.Sprintf("You ate them down in one. Gained %v casts.", gainedCharges))
 		return
 	}
 
@@ -433,17 +434,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		bassIds, parseErr := stringSliceToInt(strings.Split(messageLowerCase, " ")[1:]) // Ignore first element (the command string)
 		if parseErr != nil {
 			fmt.Println(fmt.Sprintf("%v got error: %v", m.Author.Username, parseErr))
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", parseErr))
+			s.ChannelMessageSend(channelID, fmt.Sprintf("%v", parseErr))
 			return
 		}
 
 		gainedCharges, makeBaitErr := userMakeBait(m.Author.Username, bassIds)
 		if makeBaitErr != nil {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%v", makeBaitErr))
+			s.ChannelMessageSend(channelID, fmt.Sprintf("%v", makeBaitErr))
 			return
 		}
 
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Gained %v bait charges.", gainedCharges))
+		s.ChannelMessageSend(channelID, fmt.Sprintf("Gained %v bait charges.", gainedCharges))
 		save()
 		return
 	}
@@ -459,7 +460,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		weather := "**weather** - Displays the current weather."
 		dex := "**bassdex <user>** - Displays the BassDex of the given user. Leave out <user> to display your own."
 		leaderboard := "**leaderboard** - List the top three bass."
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", baitHelp, "\n", casts, "\n", weather, "\n", dex, "\n", leaderboard))
+		s.ChannelMessageSend(channelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", baitHelp, "\n", casts, "\n", weather, "\n", dex, "\n", leaderboard))
 		return
 	}
 
