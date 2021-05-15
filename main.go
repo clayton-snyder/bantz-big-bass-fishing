@@ -292,10 +292,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		resource := tokens[3]
 
 		if err != nil {
+			fmt.Printf("Error granting casts: %v", err)
 			return
 		}
 
-		// UserCharges, UserBait
 		if grantee == "Everyone" {
 			for user, _ := range UserCharges {
 				if resource == "casts" {
@@ -507,7 +507,7 @@ func cast(strength string) (Bass, string, error) {
 // If true, debits a cast (and bait, if applicable) charge OR resets cooldown (if user has no charges)
 func debitCast(user string, baited bool) bool {
 	cast := false
-	if UserCharges[user] > 0 {
+	if UserCharges[user] >= 1.0 {
 		UserCharges[user]--
 		cast = true
 	} else if time.Now().UnixNano()-UserCooldowns[user] > castCooldown {
