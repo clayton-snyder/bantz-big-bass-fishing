@@ -312,7 +312,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 
-		if len(tokens) > 4 && tokens[5] == "notify" {
+		if len(tokens) > 4 && tokens[4] == "notify" {
 			for _, channelID := range GuildToBassChannelID {
 				s.ChannelMessageSend(channelID, fmt.Sprintf("%v has been granted %v %v.", grantee, quantity, resource))
 			}
