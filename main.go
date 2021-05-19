@@ -1,3 +1,10 @@
+/*
+ * PATCH NOTES:
+ * Eating uncommon/rare/epic grants more because you give up more
+ * Cap raised by a lot but very rare to catch very high stuff
+ *
+ */
+
 package main
 
 import (
@@ -542,6 +549,98 @@ func rollForRarity(strength string) string {
 		rarity = "Common"
 	}
 	return rarity
+}
+
+func getChampMap() map[string]string {
+	champMap := make(map[string]string)
+	return champMap
+}
+
+// Collector
+func getChampDex() []string {
+	high := -1
+	var champs []string
+	for user, dex := range UserDex {
+		if len(dex) > high {
+			high = len(dex)
+			champs = nil
+			champs = append(champs, user)
+		} else if len(dex) == high {
+			champs = append(champs, user)
+		}
+	}
+
+	return champs
+}
+
+// Hoarder
+func getChampStash() []string {
+	high := -1
+	var champs []string
+	for user, stash := range BassMap {
+		if len(stash) > high {
+			high = len(stash)
+			champs = nil
+			champs = append(champs, user)
+		} else if len(stash) == high {
+			champs = append(champs, user)
+		}
+	}
+
+	return champs
+}
+
+// Catcher of the Long Bass
+func getChampLong() {
+	high := -1
+	var champs []string
+	for user, stash := range BassMap {
+		for _, bass := range stash {
+			if bass.Size > high {
+				high = bass.Size
+				champs = nil
+				champs = append(champs, user)
+			} else if bass.Size == high {
+				if !stringArrContains(champs, user) {
+					champs = append(champs, user)
+				}
+			}
+		}
+	}
+}
+
+// Tasteful Stash
+func getChampRarity() []string {
+	high := -1
+	var champs []string
+	for user, _ := range BassMap {
+		score := getRarityScore(user)
+		if score > high {
+			high = score
+			champs = nil
+			champs = append(champs, user)
+		} else if score == high {
+			champs = append(champs, user)
+		}
+	}
+
+	return champs
+}
+
+func getRarityScore(user string) int {
+	ptsEpic, ptsRare, ptsUncommon := 5, 2, 1 // TODO: Revisit this after adjusting rarity scales
+	stash, score := BassMap[user], 0
+	for _, bass := range stash {
+		switch BassKindToRarity[bass.Kind] {
+		case "Epic":
+			score += ptsEpic
+		case "Rare":
+			score += ptsRare
+		case "Uncommon":
+			score += ptsUncommon
+		}
+	}
+	return score
 }
 
 func stringSliceToInt(stringSlice []string) ([]int, error) {
