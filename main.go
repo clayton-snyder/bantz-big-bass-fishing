@@ -31,6 +31,13 @@ type Bass struct {
 	Size int
 }
 
+type Trophy struct {
+	Title  string
+	Points int
+	Champs []string
+	Record int
+}
+
 type DexEntry struct {
 	Caught        bool
 	LargestCaught int
@@ -551,13 +558,59 @@ func rollForRarity(strength string) string {
 	return rarity
 }
 
-func getChampMap() map[string]string {
-	champMap := make(map[string]string)
-	return champMap
+// Array of trophies including World Heavyweight Champ, which is calculated based on sub-trophies
+func getTrophyCase() []Trophy {
+	trophies := []Trophy{}
+	trophies = append(trophies, getChampDex())
+	trophies = append(trophies, getChampStash())
+	trophies = append(trophies, getChampLong())
+	trophies = append(trophies, getChampRarity())
+
+	champPoints := make(map[string]int)
+
+	for _, trophy := range trophies {
+		for _, user := range trophy.Champs {
+			champPoints[user] += trophy.Points
+		}
+	}
+
+	highChampPoints, highUsers := -1, []string{}
+	for user, points := range champPoints {
+		if points > highChampPoints {
+			highUsers = nil
+			highUsers = append(highUsers, user)
+			highChampPoints = points
+		} else if points == highChampPoints {
+			highUsers = append(highUsers, user)
+		}
+	}
+
+	if len(highUsers) > 1 {
+		// Sudden Death!
+		tiebreakWinner := highUsers[0]
+		longestStashTotal := -1
+		for _, tiedUser := range highUsers {
+			userTotal := 0
+			for _, bass := range BassMap[tiedUser] {
+				userTotal += bass.Size
+			}
+			if userTotal > longestStashTotal {
+				longestStashTotal = userTotal
+				tiebreakWinner = tiedUser
+			}
+		}
+		highUsers = []string{tiebreakWinner}
+	}
+
+	heavyweightTrophy := Trophy{Title: "World Heavyweight Champion", Champs: highUsers, Record: highChampPoints}
+	trophies = append(trophies, heavyweightTrophy)
+	return trophies
 }
 
 // Collector
-func getChampDex() []string {
+func getChampDex() Trophy {
+	trophyPoints := 1
+
 	high := -1
 	var champs []string
 	for user, dex := range UserDex {
@@ -570,11 +623,13 @@ func getChampDex() []string {
 		}
 	}
 
-	return champs
+	return Trophy{Title: "Collection", Champs: champs, Points: trophyPoints, Record: high}
 }
 
 // Hoarder
-func getChampStash() []string {
+func getChampStash() Trophy {
+	trophyPoints := 1
+
 	high := -1
 	var champs []string
 	for user, stash := range BassMap {
@@ -587,11 +642,13 @@ func getChampStash() []string {
 		}
 	}
 
-	return champs
+	return Trophy{Title: "Hoarding", Champs: champs, Points: trophyPoints, Record: high}
 }
 
 // Catcher of the Long Bass
-func getChampLong() {
+func getChampLong() Trophy {
+	trophyPoints := 1
+
 	high := -1
 	var champs []string
 	for user, stash := range BassMap {
@@ -607,10 +664,14 @@ func getChampLong() {
 			}
 		}
 	}
+
+	return Trophy{Title: "Catching a Long Bass", Champs: champs, Points: trophyPoints, Record: high}
 }
 
 // Tasteful Stash
-func getChampRarity() []string {
+func getChampRarity() Trophy {
+	trophyPoints := 2
+
 	high := -1
 	var champs []string
 	for user, _ := range BassMap {
@@ -624,7 +685,7 @@ func getChampRarity() []string {
 		}
 	}
 
-	return champs
+	return Trophy{Title: "Tasteful Stash", Champs: champs, Points: trophyPoints, Record: high}
 }
 
 func getRarityScore(user string) int {
