@@ -53,6 +53,8 @@ const strongBoost, critBoost = 15, 25
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
 const layoutUS = "January 2, 2006"
 
+const maxMessageLength = 200
+
 func getBassKinds() map[string][]string {
 	BassKinds := make(map[string][]string)
 	BassKinds["Epic"] = []string{"Albino", "Warrior", "Strange"}
@@ -86,6 +88,19 @@ func stringArrContains(stringArr []string, inVal string) bool {
 		}
 	}
 	return false
+}
+
+// Returns an abbreviated version of the passed-in string so that it is under 'limit' size.
+func abbreviateString(s string, limit int) string {
+	if len(s) < limit {
+		return s
+	}
+
+	abbreviator := " ** *[too large, abbreviated...]* **"
+	abbrevString := s[0 : limit-len(abbreviator)]
+	abbrevString += abbreviator
+
+	return abbrevString
 }
 
 // This is just to be run one time to populate Dexes from current stash. No need to keep it after
@@ -248,7 +263,25 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Don't respond to messages sent in channels other than #bass-fishing
 	if m.ChannelID != channelID {
+		fmt.Printf("%v != %v", m.ChannelID, channelID)
 		return
+	}
+
+	if strings.HasPrefix(messageLowerCase, "spam") {
+		if m.Author.Username != "Clant" {
+			s.ChannelMessageSend(channelID, fmt.Sprintf("Who do you think you are?"))
+			return
+		}
+
+		tokens := strings.Split(messageLowerCase, " ")
+		if len(tokens) < 2 {
+			return
+		}
+
+		count, _ := strconv.Atoi(tokens[1])
+		repeatedString := strings.Repeat("s", count)
+
+		s.ChannelMessageSend(channelID, repeatedString)
 	}
 
 	if messageLowerCase == "loaddex" {
@@ -375,13 +408,25 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if messageLowerCase == "bass stash" || messageLowerCase == "stash" || messageLowerCase == "bassstash" {
-		fmt.Println(m.Author.Username + " bass stash")
-		s.ChannelMessageSend(channelID, fmt.Sprint(usersBassStashString(m.Author.Username)))
+	if strings.HasPrefix(messageLowerCase, "stash") || strings.HasPrefix(messageLowerCase, "bass stash") || strings.HasPrefix(messageLowerCase, "stash") {
+		fmt.Println(m.Author.Username + " " + m.Content)
+		tokens := strings.SplitN(scrubMessage(m.Content), " ", 2)
+		user := m.Author.Username
+		if len(tokens) > 1 {
+			user = tokens[1]
+		}
+
+		if len(BassMap[user]) == 0 {
+			s.ChannelMessageSend(channelID, fmt.Sprintf("No user named '%v' has a stash.", user))
+			return
+		}
+
+		s.ChannelMessageSend(channelID, abbreviateString(usersBassStashString(user), maxMessageLength))
 		return
 	}
 
 	if strings.HasPrefix(messageLowerCase, "bassdex") || strings.HasPrefix(messageLowerCase, "dex") {
+		fmt.Println(m.Author.Username + " " + m.Content)
 		tokens := strings.SplitN(scrubMessage(m.Content), " ", 2)
 		user := m.Author.Username
 		if len(tokens) > 1 {
@@ -393,8 +438,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
-		fmt.Println(m.Author.Username + " " + m.Content)
-		s.ChannelMessageSend(channelID, dexString(user))
+		s.ChannelMessageSend(channelID, abbreviateString(dexString(user), maxMessageLength))
 		return
 	}
 
@@ -482,7 +526,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(channelID, fmt.Sprint(fish, "\n", stash, "\n", eat, "\n", makeBait, "\n", baitHelp, "\n", casts, "\n", weather, "\n", dex, "\n", leaderboard))
 		return
 	}
-
 }
 
 // Rolls for and returns a Bass. Doesn't do any modification or checking of user stash, charges, etc.
