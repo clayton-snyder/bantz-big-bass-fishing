@@ -507,11 +507,11 @@ func cast(strength string) (Bass, string, error) {
 // If true, debits a cast (and bait, if applicable) charge OR resets cooldown (if user has no charges)
 func debitCast(user string, baited bool) bool {
 	cast := false
-	if UserCharges[user] >= 1.0 {
-		UserCharges[user]--
-		cast = true
-	} else if time.Now().UnixNano()-UserCooldowns[user] > castCooldown {
+	if time.Now().UnixNano()-UserCooldowns[user] > castCooldown {
 		UserCooldowns[user] = time.Now().UnixNano()
+		cast = true
+	} else if UserCharges[user] >= 1.0 {
+		UserCharges[user]--
 		cast = true
 	}
 	if cast && baited {
