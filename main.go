@@ -34,6 +34,7 @@ type Bass struct {
 type Trophy struct {
 	Title  string
 	Points int
+	PointDescriptor string
 	Champs []string
 	Record int
 }
@@ -53,7 +54,7 @@ const strongBoost, critBoost = 15, 25
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
 const layoutUS = "January 2, 2006"
 
-const maxMessageLength = 200
+const maxMessageLength = 1750
 
 func getBassKinds() map[string][]string {
 	BassKinds := make(map[string][]string)
@@ -227,7 +228,7 @@ func main() {
 		for true {
 			weatherIndex := R.Intn(len(weatherTypes))
 			CurrentWeather = weatherTypes[weatherIndex]
-			fmt.Println("Weather updated to: %v", CurrentWeather)
+			fmt.Printf("Weather updated to: %v\n", CurrentWeather)
 			for guildID := range GuildToBassChannelID {
 				fmt.Println(guildID)
 				dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint(getWeatherMap()[CurrentWeather].Message))
@@ -448,6 +449,30 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	if messageLowerCase == "newleaderboard" {
+		fmt.Println(m.Author.Username + " newleaderboard")
+		trophyCase := getTrophyCase()
+
+		for _, trophy := range trophyCase {
+			fmt.Printf("title:%v, champs:%v, points:%v, record:%v\n", trophy.Title, trophy.Champs, trophy.Points, trophy.Record)
+			var trophyTemplate string
+			if (len(trophy.Champs) > 1) {
+				var sb strings.Builder
+				for i := 0; i < len(trophy.Champs) - 1; i++ {
+					sb.WriteString(trophy.Champs[i])
+					sb.WriteString(", ")
+				}
+				sb.WriteString(" and ")
+				sb.WriteString(trophy.Champs[len(trophy.Champs) - 1])
+				trophyTemplate = fmt.Sprintf(":trophy:(%v) **%v**, the *Champions of %v*, each have %v %v.", trophy.Points, sb.String(), trophy.Title, trophy.Record, trophy.PointDescriptor) // TODO: join string
+			} else {
+				trophyTemplate = fmt.Sprintf(":trophy:(%v) **%v**", trophy.Points, trophy.Champs)
+			}
+
+		}
+
+	}
+
 	if messageLowerCase == "leaderboard" {
 		fmt.Println(m.Author.Username + " leaderboard")
 		type LeaderboardBass struct {
@@ -564,7 +589,7 @@ func cast(strength string) (Bass, string, error) {
 // If true, debits a cast (and bait, if applicable) charge OR resets cooldown (if user has no charges)
 func debitCast(user string, baited bool) bool {
 	cast := false
-	if time.Now().UnixNano() - UserCooldowns[user] > castCooldown {
+	if time.Now().UnixNano()-UserCooldowns[user] > castCooldown {
 		UserCooldowns[user] = time.Now().UnixNano()
 		cast = true
 	} else if UserCharges[user] >= 1.0 {
@@ -611,12 +636,14 @@ func getTrophyCase() []Trophy {
 
 	champPoints := make(map[string]int)
 
+	// Calculate every user's total champion points based on the individual trophies they own
 	for _, trophy := range trophies {
 		for _, user := range trophy.Champs {
 			champPoints[user] += trophy.Points
 		}
 	}
 
+	// Find the user(s) with the highest champion points
 	highChampPoints, highUsers := -1, []string{}
 	for user, points := range champPoints {
 		if points > highChampPoints {
@@ -628,6 +655,7 @@ func getTrophyCase() []Trophy {
 		}
 	}
 
+	// If there is a tie for highest champion points, user with the most length of basses wins.
 	if len(highUsers) > 1 {
 		// Sudden Death!
 		tiebreakWinner := highUsers[0]
@@ -642,6 +670,9 @@ func getTrophyCase() []Trophy {
 				tiebreakWinner = tiedUser
 			}
 		}
+
+		// This is because Trophy object takes an array for Champs since individual trophies can have multiple holders.
+		// But WHC will always be one person. If there was no tiebreak it will already be set correctly.
 		highUsers = []string{tiebreakWinner}
 	}
 
@@ -652,7 +683,7 @@ func getTrophyCase() []Trophy {
 
 // Collector
 func getChampDex() Trophy {
-	trophyPoints := 1
+	trophyPoints := 2
 
 	high := -1
 	var champs []string
@@ -666,7 +697,7 @@ func getChampDex() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Collection", Champs: champs, Points: trophyPoints, Record: high}
+	return Trophy{Title: "Collection", Champs: champs, Points: trophyPoints, PointDescriptor: "BassDex entries", Record: high}
 }
 
 // Hoarder
@@ -685,12 +716,12 @@ func getChampStash() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Hoarding", Champs: champs, Points: trophyPoints, Record: high}
+	return Trophy{Title: "Hoarding", Champs: champs, Points: trophyPoints, PointDescriptor: "bass", Record: high}
 }
 
 // Catcher of the Long Bass
 func getChampLong() Trophy {
-	trophyPoints := 1
+	trophyPoints := 2
 
 	high := -1
 	var champs []string
@@ -708,12 +739,12 @@ func getChampLong() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Catching a Long Bass", Champs: champs, Points: trophyPoints, Record: high}
+	return Trophy{Title: "Catching a Long Bass", Champs: champs, Points: trophyPoints, PointDescriptor: "a bass of length " Record: high}
 }
 
 // Tasteful Stash
 func getChampRarity() Trophy {
-	trophyPoints := 2
+	trophyPoints := 3
 
 	high := -1
 	var champs []string
