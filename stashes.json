@@ -159,6 +159,30 @@
         {
             "Kind": "Florida",
             "Size": 39
+        },
+        {
+            "Kind": "Autstralian",
+            "Size": 24
+        },
+        {
+            "Kind": "Spotted",
+            "Size": 48
+        },
+        {
+            "Kind": "Shoal",
+            "Size": 27
+        },
+        {
+            "Kind": "Smallmouth",
+            "Size": 62
+        },
+        {
+            "Kind": "Birthday",
+            "Size": 38
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 24
         }
     ],
     "Forest": [
@@ -185,6 +209,14 @@
         {
             "Kind": "Largemouth",
             "Size": 43
+        },
+        {
+            "Kind": "Smallmouth",
+            "Size": 31
+        },
+        {
+            "Kind": "Redeye",
+            "Size": 39
         }
     ],
     "KaiserSose": [

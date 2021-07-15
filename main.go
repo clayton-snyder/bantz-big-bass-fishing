@@ -32,11 +32,12 @@ type Bass struct {
 }
 
 type Trophy struct {
-	Title  string
-	Points int
-	PointDescriptor string
-	Champs []string
-	Record int
+	Title            string
+	Points           int
+	PointDescriptor  string
+	Champs           []string
+	Record           int
+	GetDisplayString func() string
 }
 
 type DexEntry struct {
@@ -49,7 +50,7 @@ type WeatherInfo struct {
 	Bait, Message string
 }
 
-const defaultMin, defaultRange, defaultMax = 20, 31, 69
+const defaultMin, defaultRange, defaultMax = 20, 31, 75
 const strongBoost, critBoost = 15, 25
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
 const layoutUS = "January 2, 2006"
@@ -210,12 +211,11 @@ func main() {
 
 	if !NoGreet {
 		for guildID := range GuildToBassChannelID {
-			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("__Update: Bass Dex__\n"+
-				"As you catch Bass, they will be recorded in your Bass Dex. Your Dex will track the first time "+
-				"you caught a given Bass, as well as the largest Bass of that kind you've ever caught (your 'PR'). \n"+
-				"Your Dex will also show :question: in place of any Bass kinds you have not yet caught.\n"+
-				"Use `bassdex` or `dex` to view your Dex. Add someone's name after to view their's. \n"+
-				"Everyone's Dex has been initialized with the Bass in your current stash and with today's date."))
+			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("__Update: New Leaderboard (beta)__\n"+
+				"Fishing is about more than just \"catch long bass\". It is now also about \"catch rare bass\", \"collect many kinds of bass\", and \"hoard large quantity of bass\".\n"+
+				"Four trophies can now be won, each granting varying trophy points. Having the most trophy points makes you the World Heavyweight Champion.\n"+
+				"Multiple anglers can hold a trophy at one time and each will receive full points. But there can only be one Champion, so trophy point ties are broken by total stash length.\n"+
+				"This might be buggy for now because tbh I did not test it very much."))
 		}
 	}
 
@@ -389,6 +389,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		strength := getStrengthFromBait(bait)
 		fmt.Println("Got '" + strength + "' from bait: " + bait)
 		caughtBass, rarity, castErr := cast(strength)
+		if needsBirthdayBass(m.Author.Username) {
+			caughtBass.Kind = "Birthday"
+		}
 
 		if castErr != nil {
 			fmt.Println(m.Author.Username + "'s cast failed.")
@@ -449,32 +452,29 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if messageLowerCase == "newleaderboard" {
-		fmt.Println(m.Author.Username + " newleaderboard")
-		trophyCase := getTrophyCase()
-
-		for _, trophy := range trophyCase {
-			fmt.Printf("title:%v, champs:%v, points:%v, record:%v\n", trophy.Title, trophy.Champs, trophy.Points, trophy.Record)
-			var trophyTemplate string
-			if (len(trophy.Champs) > 1) {
-				var sb strings.Builder
-				for i := 0; i < len(trophy.Champs) - 1; i++ {
-					sb.WriteString(trophy.Champs[i])
-					sb.WriteString(", ")
-				}
-				sb.WriteString(" and ")
-				sb.WriteString(trophy.Champs[len(trophy.Champs) - 1])
-				trophyTemplate = fmt.Sprintf(":trophy:(%v) **%v**, the *Champions of %v*, each have %v %v.", trophy.Points, sb.String(), trophy.Title, trophy.Record, trophy.PointDescriptor) // TODO: join string
-			} else {
-				trophyTemplate = fmt.Sprintf(":trophy:(%v) **%v**", trophy.Points, trophy.Champs)
-			}
-
-		}
-
-	}
-
 	if messageLowerCase == "leaderboard" {
 		fmt.Println(m.Author.Username + " leaderboard")
+		trophyCase := getTrophyCase()
+
+		var bigChamp string
+		var subChamps strings.Builder
+		for _, trophy := range trophyCase {
+			fmt.Printf("title:%v, champs:%v, points:%v, pointDescriptor:%v, record:%v\n",
+				trophy.Title, trophy.Champs, trophy.Points, trophy.PointDescriptor, trophy.Record)
+
+			if trophy.Title == "World Heavyweight Champion" {
+				// There should only ever be one big champ
+				bigChamp = fmt.Sprintf(":crown::medal: __%v__ :medal::crown:\n**World Heavyweight Champion**", trophy.Champs[0])
+			} else {
+				subChamps.WriteString(trophy.GetDisplayString() + "\n")
+			}
+		}
+
+		s.ChannelMessageSend(channelID, abbreviateString(bigChamp+"\n\n"+subChamps.String(), maxMessageLength))
+	}
+
+	if messageLowerCase == "oldleaderboard" {
+		fmt.Println(m.Author.Username + " oldleaderboard")
 		type LeaderboardBass struct {
 			Name string
 			Size int
@@ -553,6 +553,60 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
+func dateWithinDaysRange(dateString string, days int) (bool, error) {
+	dateStamp, err := time.Parse("01/02/2006", dateString)
+	if err != nil {
+		return false, err
+	}
+
+	today := time.Now()
+	prevBound := today.AddDate(0, 0, 0-days)
+	nextBound := today.AddDate(0, 0, days)
+
+	withinRange := dateStamp.After(prevBound) && dateStamp.Before(nextBound)
+	fmt.Printf("prev:%v, next:%v, arg:%v, within? %v\n", prevBound, nextBound, dateStamp, withinRange)
+	// fmt.Printf("%v within %v days of today (%v) ? = %v\n", dateString, days, today, withinRange)
+
+	return withinRange, nil
+}
+
+func needsBirthdayBass(user string) bool {
+	isBday, err := dateWithinDaysRange(getUserBirthday(user), 2)
+	if err != nil {
+		fmt.Printf("Error checking %v birthday bass: %v\n", user, err)
+	}
+
+	// Only one bday bass in stash at one time
+	for _, bass := range BassMap[user] {
+		if bass.Kind == "Birthday" {
+			return false
+		}
+	}
+
+	return isBday
+}
+
+// Returns the birthday date string with the current year (for comparison to time.Now())
+func getUserBirthday(user string) string {
+	var monthDay string
+	switch user {
+	case "Forest":
+		monthDay = "07/14"
+	case "expnch":
+		monthDay = "10/26"
+	case "Nolan":
+		monthDay = "12/18"
+	case "KaiserSose":
+		monthDay = "01/13"
+	case "nocturne":
+		monthDay = "05/22"
+	case "Clant":
+		monthDay = "05/23"
+	}
+
+	return fmt.Sprintf("%v/%v", monthDay, time.Now().Year())
+}
+
 // Rolls for and returns a Bass. Doesn't do any modification or checking of user stash, charges, etc.
 func cast(strength string) (Bass, string, error) {
 	flip := randInt(0, 1) // flip a coin, 0 = gain extra range, 1 = don't
@@ -569,7 +623,7 @@ func cast(strength string) (Bass, string, error) {
 		castMin = defaultMin + critBoost
 		castMax = defaultMax
 	} else {
-		fmt.Println(fmt.Sprintf("Invalid cast strength arg: %v", strength))
+		fmt.Println(fmt.Sprintf("Invalid cast strength arg: %v\n", strength))
 		return Bass{}, "", errors.New("Something went wrong with your cast.")
 	}
 
@@ -629,10 +683,10 @@ func rollForRarity(strength string) string {
 // Array of trophies including World Heavyweight Champ, which is calculated based on sub-trophies
 func getTrophyCase() []Trophy {
 	trophies := []Trophy{}
-	trophies = append(trophies, getChampDex())
-	trophies = append(trophies, getChampStash())
-	trophies = append(trophies, getChampLong())
-	trophies = append(trophies, getChampRarity())
+	trophies = append(trophies, getChampCollection())
+	trophies = append(trophies, getChampHoarding())
+	trophies = append(trophies, getChampLongBass())
+	trophies = append(trophies, getChampTastefulStash())
 
 	champPoints := make(map[string]int)
 
@@ -681,8 +735,11 @@ func getTrophyCase() []Trophy {
 	return trophies
 }
 
-// Collector
-func getChampDex() Trophy {
+func champArrString(champs []string) string {
+	return "**" + strings.Join(champs[0:len(champs)-1], "**, **") + "** and **" + champs[len(champs)-1] + "**"
+}
+
+func getChampCollection() Trophy {
 	trophyPoints := 2
 
 	high := -1
@@ -697,11 +754,25 @@ func getChampDex() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Collection", Champs: champs, Points: trophyPoints, PointDescriptor: "BassDex entries", Record: high}
+	return Trophy{
+		Title:           "Collection",
+		Champs:          champs,
+		Points:          trophyPoints,
+		PointDescriptor: "BassDex entries",
+		Record:          high,
+		GetDisplayString: func() string {
+			if len(champs) > 1 {
+				champStr := champArrString(champs)
+				return fmt.Sprintf(":trophy:(%v) %v, the *Champions of Collection*, each have %v unique Bass types",
+					trophyPoints, champStr, high)
+			}
+			return fmt.Sprintf(":trophy:(%v) **%v**, the *Champion of Collection*, has %v unique Bass types.",
+				trophyPoints, champs[0], high)
+		},
+	}
 }
 
-// Hoarder
-func getChampStash() Trophy {
+func getChampHoarding() Trophy {
 	trophyPoints := 1
 
 	high := -1
@@ -716,11 +787,25 @@ func getChampStash() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Hoarding", Champs: champs, Points: trophyPoints, PointDescriptor: "bass", Record: high}
+	return Trophy{
+		Title:           "Hoarding",
+		Champs:          champs,
+		Points:          trophyPoints,
+		PointDescriptor: "total Bass",
+		Record:          high,
+		GetDisplayString: func() string {
+			if len(champs) > 1 {
+				champStr := champArrString(champs)
+				return fmt.Sprintf(":trophy:(%v) %v, the *Champions of Hoarding*, each have %v total Bass",
+					trophyPoints, champStr, high)
+			}
+			return fmt.Sprintf(":trophy:(%v) **%v**, the *Champion of Hoarding*, has %v total Bass.",
+				trophyPoints, champs[0], high)
+		},
+	}
 }
 
-// Catcher of the Long Bass
-func getChampLong() Trophy {
+func getChampLongBass() Trophy {
 	trophyPoints := 2
 
 	high := -1
@@ -739,11 +824,25 @@ func getChampLong() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Catching a Long Bass", Champs: champs, Points: trophyPoints, PointDescriptor: "a bass of length " Record: high}
+	return Trophy{
+		Title:           "Long Bass",
+		Champs:          champs,
+		Points:          trophyPoints,
+		PointDescriptor: "cm",
+		Record:          high,
+		GetDisplayString: func() string {
+			if len(champs) > 1 {
+				champStr := champArrString(champs)
+				return fmt.Sprintf(":trophy:(%v) %v, the *Champions of Long Bass*, each have a Bass of the long length %vcm.",
+					trophyPoints, champStr, high)
+			}
+			return fmt.Sprintf(":trophy:(%v) **%v**, the *Champion of Long Bass*, has a Bass of the long length %vcm.",
+				trophyPoints, champs[0], high)
+		},
+	}
 }
 
-// Tasteful Stash
-func getChampRarity() Trophy {
+func getChampTastefulStash() Trophy {
 	trophyPoints := 3
 
 	high := -1
@@ -759,7 +858,22 @@ func getChampRarity() Trophy {
 		}
 	}
 
-	return Trophy{Title: "Tasteful Stash", Champs: champs, Points: trophyPoints, Record: high}
+	return Trophy{
+		Title:           "Tasteful Stash",
+		Champs:          champs,
+		Points:          trophyPoints,
+		PointDescriptor: "rarity points",
+		Record:          high,
+		GetDisplayString: func() string {
+			if len(champs) > 1 {
+				champStr := champArrString(champs)
+				return fmt.Sprintf(":trophy:(%v) %v, the *Champions of Tasteful Stash*, each have %v rarity points.",
+					trophyPoints, champStr, high)
+			}
+			return fmt.Sprintf(":trophy:(%v) **%v**, the *Champion of Tasteful Stash*, has %v rarity points.",
+				trophyPoints, champs[0], high)
+		},
+	}
 }
 
 func getRarityScore(user string) int {
@@ -852,6 +966,10 @@ func catchString(username string, caughtBass Bass, rarity string, strength strin
 	default:
 		catchString += fmt.Sprintf("%v caught a %vm %v %v bass.",
 			username, caughtBass.Size, rarity, caughtBass.Kind)
+	}
+
+	if caughtBass.Kind == "Birthday" {
+		catchString = fmt.Sprintf(":birthday: %v caught a %vcm **%v bass!**", username, caughtBass.Size, caughtBass.Kind)
 	}
 
 	return catchString

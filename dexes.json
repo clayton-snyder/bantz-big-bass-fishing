@@ -20,6 +20,11 @@
             "LargestCaught": 51,
             "FirstCaught": "2021-05-13T01:16:28.81339279Z"
         },
+        "Birthday": {
+            "Caught": true,
+            "LargestCaught": 42,
+            "FirstCaught": "2021-07-14T19:30:38.2071832-07:00"
+        },
         "Cahaba": {
             "Caught": true,
             "LargestCaught": 68,
@@ -77,12 +82,12 @@
         },
         "Smallmouth": {
             "Caught": true,
-            "LargestCaught": 58,
+            "LargestCaught": 62,
             "FirstCaught": "2021-05-13T01:16:28.813475204Z"
         },
         "Spotted": {
             "Caught": true,
-            "LargestCaught": 45,
+            "LargestCaught": 48,
             "FirstCaught": "2021-05-13T01:16:28.813449595Z"
         }
     },
