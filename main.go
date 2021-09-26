@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -50,9 +51,15 @@ type WeatherInfo struct {
 	Bait, Message string
 }
 
+type UserCooldown struct {
+	Charges          int
+	LastCooldownCast int64
+}
+
 const defaultMin, defaultRange, defaultMax = 20, 31, 75
 const strongBoost, critBoost = 15, 25
 const castCooldown = 3600000000000 // in nanoseconds, 1hr
+const cooldownChargesMax = 5
 const layoutUS = "January 2, 2006"
 
 const maxMessageLength = 1750
@@ -133,7 +140,7 @@ var (
 	GuildToBassChannelID map[string]string
 	ChannelID            string
 	BassMap              map[string][]Bass
-	UserCooldowns        map[string]int64
+	UserCooldowns        map[string]UserCooldown
 	UserCharges          map[string]float32
 	UserBait             map[string]int
 	CurrentWeather       string
@@ -150,7 +157,7 @@ func init() {
 	fmt.Printf("Parsed NoGreet as %v \n", NoGreet)
 	GuildToBassChannelID = make(map[string]string)
 	BassMap = make(map[string][]Bass)
-	UserCooldowns = make(map[string]int64)
+	UserCooldowns = make(map[string]UserCooldown)
 	UserCharges = make(map[string]float32)
 	UserBait = make(map[string]int)
 	CurrentWeather = "mist"
@@ -211,11 +218,7 @@ func main() {
 
 	if !NoGreet {
 		for guildID := range GuildToBassChannelID {
-			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("__Update: New Leaderboard (beta)__\n"+
-				"Fishing is about more than just \"catch long bass\". It is now also about \"catch rare bass\", \"collect many kinds of bass\", and \"hoard large quantity of bass\".\n"+
-				"Four trophies can now be won, each granting varying trophy points. Having the most trophy points makes you the World Heavyweight Champion.\n"+
-				"Multiple anglers can hold a trophy at one time and each will receive full points. But there can only be one Champion, so trophy point ties are broken by total stash length.\n"+
-				"This might be buggy for now because tbh I did not test it very much."))
+			dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint("Season 2"))
 		}
 	}
 
@@ -345,7 +348,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if grantee == "Everyone" {
-			for user, _ := range UserCharges {
+			for user := range UserCharges {
 				if resource == "casts" {
 					UserCharges[user] += float32(quantity)
 				} else if resource == "bait" {
@@ -643,8 +646,10 @@ func cast(strength string) (Bass, string, error) {
 // If true, debits a cast (and bait, if applicable) charge OR resets cooldown (if user has no charges)
 func debitCast(user string, baited bool) bool {
 	cast := false
-	if time.Now().UnixNano()-UserCooldowns[user] > castCooldown {
-		UserCooldowns[user] = time.Now().UnixNano()
+	// refreshCooldownCharges
+	if time.Now().UnixNano()-UserCooldowns[user].LastCooldownCast > castCooldown {
+		userCd := UserCooldowns[user]
+		userCd.LastCooldownCast = time.Now().UnixNano()
 		cast = true
 	} else if UserCharges[user] >= 1.0 {
 		UserCharges[user]--
@@ -655,6 +660,16 @@ func debitCast(user string, baited bool) bool {
 	}
 
 	return cast
+}
+
+// Grants user cooldown charges (up to cooldownChargesMax) based on the time of their last
+func refreshCooldownCharges(user string) {
+	userCd := UserCooldowns[user]
+	// User should have at least this many casts, but if they have more we leave them
+	minCasts := int(time.Now().UnixNano() - userCd.LastCooldownCast/castCooldown)
+	if minCasts > userCd.Charges {
+		userCd.Charges = int(math.Min(float64(minCasts), cooldownChargesMax))
+	}
 }
 
 func rollForRarity(strength string) string {
@@ -847,7 +862,7 @@ func getChampTastefulStash() Trophy {
 
 	high := -1
 	var champs []string
-	for user, _ := range BassMap {
+	for user := range BassMap {
 		score := getRarityScore(user)
 		if score > high {
 			high = score
