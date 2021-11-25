@@ -75,13 +75,13 @@ func getBassKinds() map[string][]string {
 
 func getWeatherMap() map[string]WeatherInfo {
 	WeatherMap := make(map[string]WeatherInfo)
-	WeatherMap["drizzle"] = WeatherInfo{Bait: "plug lure", Message: "It's drizzling..."}
-	WeatherMap["snow"] = WeatherInfo{Bait: "plain powerbait", Message: "Snow is falling..."}
-	WeatherMap["wind"] = WeatherInfo{Bait: "jig lure", Message: "A cold wind blows..."}
-	WeatherMap["storm"] = WeatherInfo{Bait: "spinner lure", Message: "The thunder rolls..."}
-	WeatherMap["fog"] = WeatherInfo{Bait: "glitter powerbait", Message: "The fog is thick..."}
+	WeatherMap["drizzle"] = WeatherInfo{Bait: "fly", Message: "It's drizzling..."}
+	WeatherMap["snow"] = WeatherInfo{Bait: "plug lure", Message: "Snow is falling..."}
+	WeatherMap["wind"] = WeatherInfo{Bait: "plain powerbait", Message: "A cold wind blows..."}
+	WeatherMap["storm"] = WeatherInfo{Bait: "jig lure", Message: "The thunder rolls..."}
+	WeatherMap["fog"] = WeatherInfo{Bait: "spinner lure", Message: "The fog is thick..."}
 	WeatherMap["sun"] = WeatherInfo{Bait: "offal", Message: "The sun beats down..."}
-	WeatherMap["mist"] = WeatherInfo{Bait: "fly", Message: "Mist fills the air..."}
+	WeatherMap["mist"] = WeatherInfo{Bait: "glitter powerbait", Message: "Mist fills the air..."}
 	WeatherMap["sandstorm"] = WeatherInfo{Bait: "worm", Message: "A harsh sandstorm rages..."}
 	return WeatherMap
 }
@@ -642,22 +642,38 @@ func cast(strength string) (Bass, string, error) {
 	return bass, bassRarity, nil
 }
 
-// Returns bool stating if a user can fish, based on casts or cooldown.
-// If true, debits a cast (and bait, if applicable) charge OR resets cooldown (if user has no charges)
+// Returns bool stating if a user can fish based on casts or cooldown.
+// If true, debits a cast (and bait if applicable) charge OR resets cooldown (if user has no charges)
 func debitCast(user string, baited bool) bool {
 	cast := false
-	// refreshCooldownCharges
-	if time.Now().UnixNano()-UserCooldowns[user].LastCooldownCast > castCooldown {
-		userCd := UserCooldowns[user]
+	refreshCooldownCharges(user)
+	userCd := UserCooldowns[user]
+	fmt.Printf("user=%v, cdCasts=%v, charges=%v, bait=%v, lastCdCast=%v.",
+		user,
+		userCd.Charges,
+		UserCharges[user],
+		UserBait[user],
+		userCd.LastCooldownCast)
+
+	if userCd.Charges >= 1 {
+		fmt.Printf("granted by COOLDOWN CHARGES")
 		userCd.LastCooldownCast = time.Now().UnixNano()
+		userCd.Charges--
 		cast = true
 	} else if UserCharges[user] >= 1.0 {
+		fmt.Printf("granted by EXTRA CHARGES")
 		UserCharges[user]--
 		cast = true
 	}
 	if cast && baited {
 		UserBait[user]--
 	}
+	fmt.Printf("cast=%v, cdCasts=%v, charges=%v, bait=%v, lastCdCast=%v",
+		cast,
+		UserCooldowns[user].Charges,
+		UserCharges[user],
+		UserBait[user],
+		UserCooldowns[user].LastCooldownCast)
 
 	return cast
 }
@@ -665,11 +681,13 @@ func debitCast(user string, baited bool) bool {
 // Grants user cooldown charges (up to cooldownChargesMax) based on the time of their last
 func refreshCooldownCharges(user string) {
 	userCd := UserCooldowns[user]
+	fmt.Printf("Refreshing cooldown charges for %v. Cur=%v", user, userCd.Charges)
 	// User should have at least this many casts, but if they have more we leave them
-	minCasts := int(time.Now().UnixNano() - userCd.LastCooldownCast/castCooldown)
+	minCasts := int((time.Now().UnixNano() - userCd.LastCooldownCast) / castCooldown)
 	if minCasts > userCd.Charges {
 		userCd.Charges = int(math.Min(float64(minCasts), cooldownChargesMax))
 	}
+	fmt.Printf("Finished. minCasts=%v, newCdCharges=%v", minCasts, UserCooldowns[user].Charges)
 }
 
 func rollForRarity(strength string) string {
