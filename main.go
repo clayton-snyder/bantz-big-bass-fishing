@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
@@ -48,6 +49,23 @@ type DexEntry struct {
 
 type WeatherInfo struct {
 	Bait, Message string
+}
+
+type QuotesApiResponse struct {
+	Contents Contents
+	Success  string
+}
+
+type Contents struct {
+	Quotes []Quote
+}
+
+type Quote struct {
+	Author string
+	Quote  string
+	Id     string
+	Image  string
+	Length int
 }
 
 const defaultMin, defaultRange, defaultMax = 20, 31, 75
@@ -92,6 +110,37 @@ func stringArrContains(stringArr []string, inVal string) bool {
 	return false
 }
 
+func isTimeForAQuote() bool {
+	lastQuoteTime, err := readLastSportsQuoteDate()
+	if err != nil {
+		fmt.Printf("Error getting last quote date: %v", err)
+		return false
+	}
+
+	return lastQuoteTime.Add(time.Hour * 24).Before(time.Now())
+}
+
+func getSportsQuote() string {
+	response, err := http.Get("https://quotes.rest/qod?category=sports&language=en")
+	if err != nil {
+		fmt.Printf("Error with sending request: %v", err)
+		return "We got a serious problem."
+	}
+
+	defer response.Body.Close()
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Printf("Error with ReadAll body: %v", err)
+		return "We got a serious problem."
+	}
+
+	var jsonBody QuotesApiResponse
+	json.Unmarshal(body, &jsonBody)
+
+	return fmt.Sprintf("\"%v\"\n\n%v", jsonBody.Contents.Quotes[0].Quote, jsonBody.Contents.Quotes[0].Author)
+}
+
 // Returns an abbreviated version of the passed-in string so that it is under 'limit' size.
 func abbreviateString(s string, limit int) string {
 	if len(s) < limit {
@@ -131,6 +180,7 @@ var (
 	Token                string
 	NoGreet              bool
 	GuildToBassChannelID map[string]string
+	SportsChannelID      string
 	ChannelID            string
 	BassMap              map[string][]Bass
 	UserCooldowns        map[string]int64
@@ -206,6 +256,10 @@ func main() {
 				GuildToBassChannelID[guild.ID] = c.ID
 				fmt.Println(fmt.Sprintf("\tMapped guild %v to channel %v (%v)", guild.ID, c.Name, c.ID))
 			}
+			if c.Name == "sports-motivation" {
+				SportsChannelID = c.ID
+				fmt.Printf("Found sports-motivation channel ID: %v", SportsChannelID)
+			}
 		}
 	}
 
@@ -225,7 +279,7 @@ func main() {
 			weatherTypes = append(weatherTypes, k)
 		}
 		fmt.Printf("Loaded weatherTypes from WeatherMap in anon function: %v \n", weatherTypes)
-		for true {
+		for {
 			weatherIndex := R.Intn(len(weatherTypes))
 			CurrentWeather = weatherTypes[weatherIndex]
 			fmt.Printf("Weather updated to: %v\n", CurrentWeather)
@@ -234,6 +288,21 @@ func main() {
 				dg.ChannelMessageSend(GuildToBassChannelID[guildID], fmt.Sprint(getWeatherMap()[CurrentWeather].Message))
 			}
 			time.Sleep(180 * time.Minute)
+		}
+	}()
+
+	go func() {
+		for {
+			if isTimeForAQuote() {
+				quote := getSportsQuote()
+				dg.ChannelMessageSend(SportsChannelID, getSportsQuote())
+				if quote != "We got a serious problem." {
+					updateLastSportsQuoteDate()
+				}
+			} else {
+				fmt.Printf("%v: Not time for a quote.\n", time.Now().Format(time.RFC3339))
+			}
+			time.Sleep(time.Minute)
 		}
 	}()
 
@@ -1120,6 +1189,20 @@ func dexString(user string) string {
 	}
 
 	return dexString
+}
+
+func readLastSportsQuoteDate() (time.Time, error) {
+	fmt.Println("loading last sports quote timestamp from file...")
+	quoteFile, _ := ioutil.ReadFile("lastquotetime.txt")
+	return time.Parse(time.RFC3339, string(quoteFile))
+}
+
+func updateLastSportsQuoteDate() {
+	t := time.Now()
+	err := ioutil.WriteFile("lastquotetime.txt", []byte(t.Format(time.RFC3339)), 0644)
+	if err != nil {
+		fmt.Printf("Error saving timestamp: %v\n", err)
+	}
 }
 
 func load() {
